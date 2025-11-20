@@ -1,0 +1,10 @@
+export function random(len) {
+    let options = "qwertyuiopasdfghjklzxcvbnm123456789";
+    let optionSize = options.length;
+    let ans = "";
+    for (let i = 0; i < len; i++) {
+        ans += options[(Math.floor(Math.random() * optionSize))];
+    }
+    return ans;
+}
+//# sourceMappingURL=utils.js.map
