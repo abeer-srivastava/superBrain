@@ -28,7 +28,11 @@ const contentSchema=new Schema({
         type:String,
         enum:contentType,
         required:true
-    }
+    },
+  embedding: {
+    type: [Number], // store locally if you want (optional)
+    default: []
+  }
 },{timestamps:true});
 contentSchema.pre("save",async function(next){
     const userId=this.userId;

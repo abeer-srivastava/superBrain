@@ -2,9 +2,15 @@ import express, { urlencoded } from "express";
 import userRouter from "./routes/userRouter.js";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cors from "cors";
 const app = express();
-const PORT = 8080;
+const PORT = 3000;
 dotenv.config();
+// Enable CORS for frontend
+app.use(cors({
+    origin: ["http://localhost:3001", "http://localhost:3000"],
+    credentials: true
+}));
 const mongoConnect = async () => {
     try {
         console.log("URL", process.env.MONGO_URL);

@@ -5,6 +5,7 @@ declare const Content: mongoose.Model<{
     title: string;
     tags: mongoose.Types.ObjectId[];
     userId: mongoose.Types.ObjectId;
+    embedding: number[];
     shareLink?: string | null;
 } & mongoose.DefaultTimestampProps, {}, {}, {}, mongoose.Document<unknown, {}, {
     type: string;
@@ -12,6 +13,7 @@ declare const Content: mongoose.Model<{
     title: string;
     tags: mongoose.Types.ObjectId[];
     userId: mongoose.Types.ObjectId;
+    embedding: number[];
     shareLink?: string | null;
 } & mongoose.DefaultTimestampProps, {}, {
     timestamps: true;
@@ -21,6 +23,7 @@ declare const Content: mongoose.Model<{
     title: string;
     tags: mongoose.Types.ObjectId[];
     userId: mongoose.Types.ObjectId;
+    embedding: number[];
     shareLink?: string | null;
 } & mongoose.DefaultTimestampProps & {
     _id: mongoose.Types.ObjectId;
@@ -34,6 +37,7 @@ declare const Content: mongoose.Model<{
     title: string;
     tags: mongoose.Types.ObjectId[];
     userId: mongoose.Types.ObjectId;
+    embedding: number[];
     shareLink?: string | null;
 } & mongoose.DefaultTimestampProps, mongoose.Document<unknown, {}, mongoose.FlatRecord<{
     type: string;
@@ -41,6 +45,7 @@ declare const Content: mongoose.Model<{
     title: string;
     tags: mongoose.Types.ObjectId[];
     userId: mongoose.Types.ObjectId;
+    embedding: number[];
     shareLink?: string | null;
 } & mongoose.DefaultTimestampProps>, {}, mongoose.ResolveSchemaOptions<{
     timestamps: true;
@@ -50,6 +55,7 @@ declare const Content: mongoose.Model<{
     title: string;
     tags: mongoose.Types.ObjectId[];
     userId: mongoose.Types.ObjectId;
+    embedding: number[];
     shareLink?: string | null;
 } & mongoose.DefaultTimestampProps> & {
     _id: mongoose.Types.ObjectId;

@@ -4,7 +4,13 @@ export const userMiddleware = (req, res, next) => {
     try {
         const authHeader = req.headers["authorization"];
         console.log("the auth header", authHeader);
-        const decoded = jwt.verify(authHeader, JWT_Password);
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res.status(401).json({ message: "No token provided" });
+        }
+        // Extract token from "Bearer TOKEN" format
+        const token = authHeader.substring(7); // Remove "Bearer " prefix
+        console.log("extracted token", token);
+        const decoded = jwt.verify(token, JWT_Password);
         console.log("decoded token ", decoded);
         if (decoded) {
             req.userId = decoded.id;
