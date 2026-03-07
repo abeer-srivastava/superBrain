@@ -24,9 +24,9 @@ export function useContent() {
     }, []);
 
     const addContent = useCallback(
-        async (title: string, link: string, type: string) => {
+        async (title: string, link: string, type: string, extractedText?: string, file?: File) => {
             try {
-                const newContent = await contentAPI.add(title, link, type);
+                const newContent = await contentAPI.add(title, link, type, extractedText, file);
                 setContents((prev) => [newContent, ...prev]);
                 return { success: true };
             } catch (err: any) {
@@ -43,7 +43,7 @@ export function useContent() {
     const deleteContent = useCallback(async (contentId: string) => {
         try {
             await contentAPI.delete(contentId);
-            setContents((prev) => prev.filter((c) => c.id !== contentId));
+            setContents((prev) => prev.filter((c) => (c._id || c.id) !== contentId));
             return { success: true };
         } catch (err: any) {
             console.error("Failed to delete content:", err);

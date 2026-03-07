@@ -1,9 +1,15 @@
 export interface Content {
     id: string;
+    _id?: string; // MongoDB format
     title: string;
-    link: string;
+    link?: string;
+    originalLink?: string;
     type: string;
     userId?: string;
+    status: 'processing' | 'ready' | 'failed';
+    extractedText?: string;
+    summary?: string;
+    tags?: string[];
     createdAt?: string;
 }
 

@@ -8,8 +8,9 @@ import type {
 } from "@/types/content";
 
 // Create axios instance with base configuration
+// The NestJS backend is running at http://localhost:3000
 export const api = axios.create({
-    baseURL: "http://localhost:3000/api/v1/user",
+    baseURL: "http://localhost:3000/api/v1/",
     headers: {
         "Content-Type": "application/json",
     },
@@ -19,11 +20,8 @@ export const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem("token");
-        console.log("Interceptor - token from localStorage:", token);
-        console.log("Interceptor - token type:", typeof token);
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log("Interceptor - Authorization header:", config.headers.Authorization);
         }
         return config;
     },
@@ -52,32 +50,15 @@ api.interceptors.response.use(
 export const authAPI = {
     signup: async (username: string, email: string, password: string) => {
         try {
-            console.log("Signup - calling API with:", { username, email, password });
-            // Backend returns { message, userId } - need to signin after signup
-            const response = await api.post<{ message: string; userId: string }>("/signup", {
+            const response = await api.post<{ token: string }>("signup", {
                 username,
                 email,
                 password,
             });
-            console.log("Signup - signup response:", response.data);
 
-            // After successful signup, automatically sign in to get token
-            console.log("Signup - now calling signin...");
-            const signinResponse = await api.post("/signin", {
-                email,
-                password,
-            });
-            console.log("Signup - signin response:", signinResponse);
-            console.log("Signup - signin response.data:", signinResponse.data);
-            console.log("Signup - signin response.data type:", typeof signinResponse.data);
-
-            // Backend returns token as plain string
-            const token = typeof signinResponse.data === 'string' ? signinResponse.data : signinResponse.data.token;
-            console.log("Signup - extracted token:", token);
-            console.log("Signup - token type:", typeof token);
-
-            if (!token || token === 'undefined') {
-                throw new Error("No valid token received from server after signup");
+            const token = response.data.token;
+            if (!token) {
+                throw new Error("No token received from server after signup");
             }
 
             return {
@@ -90,30 +71,21 @@ export const authAPI = {
         }
     },
 
-    signin: async (email: string, password: string) => {
+    signin: async (username: string, password: string) => {
         try {
-            console.log("Signin - calling API with:", { email, password });
-            // Backend returns token as plain string wrapped in JSON response
-            const response = await api.post("/signin", {
-                email,
+            const response = await api.post<{ token: string }>("signin", {
+                username,
                 password,
             });
-            console.log("Signin - full response:", response);
-            console.log("Signin - response.data:", response.data);
-            console.log("Signin - response.data type:", typeof response.data);
 
-            // response.data will be the token string directly
-            const token = typeof response.data === 'string' ? response.data : response.data.token;
-            console.log("Signin - extracted token:", token);
-            console.log("Signin - token type:", typeof token);
-
-            if (!token || token === 'undefined') {
-                throw new Error("No valid token received from server");
+            const token = response.data.token;
+            if (!token) {
+                throw new Error("No token received from server");
             }
 
             return {
                 token: token,
-                user: { email, username: email.split('@')[0] }
+                user: { username, email: "" }
             };
         } catch (error) {
             console.error("Signin API error:", error);
@@ -125,24 +97,37 @@ export const authAPI = {
 // Content API
 export const contentAPI = {
     getAll: async () => {
-        // Backend returns { contentData } not { contents }
-        const response = await api.get<{ contentData: Content[] }>("/content");
-        return response.data.contentData;
+        const response = await api.get<Content[]>("content");
+        return response.data;
     },
 
-    add: async (title: string, link: string, type: string) => {
-        const response = await api.post<{ content: Content }>("/content", {
-            title,
-            link,
-            type,
-        });
-        return response.data.content;
+    add: async (title: string, link: string, type: string, extractedText?: string, file?: File) => {
+        if (file) {
+            const formData = new FormData();
+            formData.append("title", title);
+            formData.append("type", type);
+            if (extractedText) formData.append("extractedText", extractedText);
+            formData.append("file", file);
+
+            const response = await api.post<Content>("content/upload", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+            return response.data;
+        } else {
+            const response = await api.post<Content>("content", {
+                title,
+                originalLink: link,
+                type,
+                extractedText,
+            });
+            return response.data;
+        }
     },
 
     delete: async (contentId: string) => {
-        const response = await api.delete("/content", {
-            data: { contentId },
-        });
+        const response = await api.delete(`content/${contentId}`);
         return response.data;
     },
 };
@@ -150,33 +135,37 @@ export const contentAPI = {
 // Search API
 export const searchAPI = {
     search: async (query: string) => {
-        const response = await api.post<{ results: SearchResult[] }>("/search", {
+        const response = await api.get<any[]>(`ai/search`, {
+            params: { q: query }
+        });
+        
+        return response.data.map(item => ({
+            id: item.id,
+            score: item.score,
+            title: item.payload?.title || "Untitled",
+            link: item.payload?.link || "#",
+            type: item.payload?.type || "unknown"
+        }));
+    },
+    ask: async (query: string) => {
+        const response = await api.post<{ answer: string; sources: any[] }>(`ai/ask`, {
             query,
         });
-        return response.data.results;
-    },
+        return response.data;
+    }
 };
 
 // Share Brain API
 export const shareBrainAPI = {
     toggleShare: async (share: boolean) => {
-        const response = await api.post<{ message?: string; hash?: string }>("/share/brain", {
+        const response = await api.post<{ hash?: string; message?: string }>("brain/share", {
             share,
         });
-        // Backend returns { hash } if existing, or { message: "Link created" + hash } if new
-        if (response.data.hash) {
-            return { hash: response.data.hash, message: "Sharing enabled" };
-        } else if (response.data.message) {
-            // Extract hash from message like "Link createdABC123"
-            const hash = response.data.message.replace("Link created", "").trim();
-            return { hash, message: response.data.message };
-        }
         return response.data;
     },
 
     getSharedBrain: async (hash: string) => {
-        // Backend returns { username, content } not { username, contents }
-        const response = await api.get<{ username: string; content: Content[] }>(`/brain/${hash}`);
+        const response = await api.get<{ username: string; content: Content[] }>(`brain/${hash}`);
         return {
             username: response.data.username,
             contents: response.data.content

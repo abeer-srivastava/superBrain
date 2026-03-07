@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: secondbrain_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: secondbrain_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: always
+
+  redis:
+    image: redis:alpine
+    container_name: secondbrain_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+volumes:
+  mongo_data:
+  qdrant_data:

@@ -10,7 +10,7 @@ import { Brain, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function SigninPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,13 +20,13 @@ export default function SigninPage() {
     e.preventDefault();
     setError(null);
 
-    if (!email.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       setError("All fields are required");
       return;
     }
 
     setIsLoading(true);
-    const result = await signin(email, password);
+    const result = await signin(username, password);
     setIsLoading(false);
 
     if (!result.success) {
@@ -64,15 +64,15 @@ export default function SigninPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-heading font-bold mb-2">
-                  Email
+                <label htmlFor="username" className="block text-sm font-heading font-bold mb-2">
+                  Username
                 </label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}
                 />
               </div>

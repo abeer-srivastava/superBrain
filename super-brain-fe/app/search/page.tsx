@@ -3,12 +3,37 @@
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SearchBar } from "@/components/SearchBar";
 import { useSearch } from "@/hooks/useSearch";
-import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExternalLink, Sparkles, MessageSquare, BookOpen } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { searchAPI } from "@/lib/api";
 
 export default function SearchPage() {
   const { results, loading, error, lastQuery, search } = useSearch();
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [isAsking, setIsAsking] = useState(false);
+
+  const handleSearch = async (query: string) => {
+    setAiAnswer(null);
+    const res = await search(query);
+    if (res.success) {
+      // Automatically ask AI as well
+      handleAsk(query);
+    }
+  };
+
+  const handleAsk = async (query: string) => {
+    try {
+      setIsAsking(true);
+      const data = await searchAPI.ask(query);
+      setAiAnswer(data.answer);
+    } catch (err) {
+      console.error("Failed to get AI answer:", err);
+    } finally {
+      setIsAsking(false);
+    }
+  };
 
   return (
     <ProtectedRoute>
@@ -20,19 +45,56 @@ export default function SearchPage() {
               <Sparkles className="w-8 h-8 text-main-foreground" />
             </div>
             <h1 className="text-4xl font-heading font-bold text-foreground">
-              Semantic Search
+              SecondBrain AI
             </h1>
             <p className="text-foreground/70 font-base max-w-2xl mx-auto">
-              Search your brain using natural language. Our AI understands context and meaning.
+              Ask questions or search your brain using natural language.
             </p>
           </div>
 
           {/* Search Bar */}
           <SearchBar
-            onSearch={search}
+            onSearch={handleSearch}
             initialQuery={lastQuery}
             loading={loading}
           />
+
+          {/* AI Answer Section */}
+          <AnimatePresence>
+            {(isAsking || aiAnswer) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="space-y-4"
+              >
+                <Card className="border-main">
+                  <CardHeader className="bg-main/10 border-b-4 border-border">
+                    <CardTitle className="flex items-center gap-2 text-main">
+                      <MessageSquare className="w-6 h-6" />
+                      AI Insights
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    {isAsking ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 bg-main rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                        <div className="w-2 h-2 bg-main rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                        <div className="w-2 h-2 bg-main rounded-full animate-bounce"></div>
+                        <span className="text-foreground/70 font-base italic">Consulting your brain...</span>
+                      </div>
+                    ) : (
+                      <div className="prose prose-stone max-w-none">
+                        <p className="text-lg font-base leading-relaxed whitespace-pre-wrap">
+                          {aiAnswer}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Error Message */}
           {error && (
@@ -41,8 +103,8 @@ export default function SearchPage() {
             </div>
           )}
 
-          {/* Loading State */}
-          {loading && (
+          {/* Loading State for Search */}
+          {loading && !results.length && (
             <div className="text-center py-12">
               <div className="w-16 h-16 border-4 border-border border-t-main rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-foreground/70 font-base">Searching your brain...</p>
@@ -57,8 +119,9 @@ export default function SearchPage() {
               transition={{ duration: 0.3 }}
               className="space-y-4"
             >
-              <h2 className="text-2xl font-heading font-bold text-foreground">
-                Results ({results.length})
+              <h2 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
+                <BookOpen className="w-6 h-6" />
+                Sources Found ({results.length})
               </h2>
 
               <div className="space-y-3">
@@ -77,17 +140,19 @@ export default function SearchPage() {
                               {result.title}
                             </h3>
 
-                            <a
-                              href={result.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-sm text-foreground/70 hover:text-main transition-colors mb-3 group"
-                            >
-                              <ExternalLink className="w-4 h-4 flex-shrink-0" />
-                              <span className="truncate group-hover:underline">
-                                {result.link}
-                              </span>
-                            </a>
+                            {result.link && result.link !== "#" && (
+                              <a
+                                href={result.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-foreground/70 hover:text-main transition-colors mb-3 group"
+                              >
+                                <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate group-hover:underline">
+                                  {result.link}
+                                </span>
+                              </a>
+                            )}
 
                             <div className="flex items-center gap-2">
                               <div className="inline-flex items-center px-3 py-1 rounded-[var(--radius-base)] border-4 border-border bg-main text-main-foreground text-xs font-heading font-bold shadow-[2px_2px_0px_0px_var(--border)]">
