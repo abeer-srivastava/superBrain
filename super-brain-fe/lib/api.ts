@@ -8,9 +8,11 @@ import type {
 } from "@/types/content";
 
 // Create axios instance with base configuration
-// The NestJS backend is running at http://localhost:3000
+const DEFAULT_API_URL = "http://localhost:3000/api/v1/";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
+
 export const api = axios.create({
-    baseURL: "http://localhost:3000/api/v1/",
+    baseURL: API_URL.endsWith("/") ? API_URL : `${API_URL}/`,
     headers: {
         "Content-Type": "application/json",
     },
