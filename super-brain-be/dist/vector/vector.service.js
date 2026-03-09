@@ -23,6 +23,7 @@ let VectorService = VectorService_1 = class VectorService {
         this.configService = configService;
         this.client = new js_client_rest_1.QdrantClient({
             url: this.configService.get('QDRANT_URL', 'http://127.0.0.1:6333'),
+            apiKey: this.configService.get('QDRANT_API_KEY'),
         });
     }
     async onModuleInit() {
