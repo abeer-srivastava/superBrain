@@ -26,14 +26,28 @@ import { ShareModule } from './share/share.module';
     }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>('REDIS_HOST', '127.0.0.1'),
-          port: configService.get<number>('REDIS_PORT', 6379),
-          password: configService.get<string>('REDIS_PASSWORD'),
-          tls: configService.get<string>('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
-        },
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const redisUrl = configService.get<string>('REDIS_URL');
+        if (redisUrl) {
+          // If it's a rediss:// URL, ioredis handles TLS automatically
+          return {
+            connection: redisUrl.startsWith('rediss://')
+              ? redisUrl
+              : {
+                  url: redisUrl,
+                  tls: redisUrl.includes('upstash.io') ? {} : undefined,
+                },
+          };
+        }
+        return {
+          connection: {
+            host: configService.get<string>('REDIS_HOST', '127.0.0.1').replace(/^https?:\/\//, ''),
+            port: configService.get<number>('REDIS_PORT', 6379),
+            password: configService.get<string>('REDIS_PASSWORD'),
+            tls: configService.get<string>('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
     AuthModule,
