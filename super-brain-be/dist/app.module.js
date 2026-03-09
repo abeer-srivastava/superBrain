@@ -42,6 +42,8 @@ exports.AppModule = AppModule = __decorate([
                     connection: {
                         host: configService.get('REDIS_HOST', '127.0.0.1'),
                         port: configService.get('REDIS_PORT', 6379),
+                        password: configService.get('REDIS_PASSWORD'),
+                        tls: configService.get('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
                     },
                 }),
                 inject: [config_1.ConfigService],

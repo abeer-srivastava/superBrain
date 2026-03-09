@@ -87,7 +87,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AiController.prototype, "ask", null);
 exports.AiController = AiController = __decorate([
-    (0, common_1.Controller)('api/v1/ai'),
+    (0, common_1.Controller)('ai'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [ai_service_1.AiService,
         vector_service_1.VectorService,

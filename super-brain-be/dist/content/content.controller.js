@@ -106,7 +106,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ContentController.prototype, "delete", null);
 exports.ContentController = ContentController = __decorate([
-    (0, common_1.Controller)('api/v1/content'),
+    (0, common_1.Controller)('content'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [content_service_1.ContentService,
         queue_service_1.QueueService])

@@ -71,7 +71,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ShareController.prototype, "getSharedBrain", null);
 exports.ShareController = ShareController = __decorate([
-    (0, common_1.Controller)('api/v1/brain'),
+    (0, common_1.Controller)('brain'),
     __metadata("design:paramtypes", [share_service_1.ShareService,
         content_service_1.ContentService,
         user_service_1.UserService])
