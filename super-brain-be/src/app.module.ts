@@ -30,6 +30,8 @@ import { ShareModule } from './share/share.module';
         connection: {
           host: configService.get<string>('REDIS_HOST', '127.0.0.1'),
           port: configService.get<number>('REDIS_PORT', 6379),
+          password: configService.get<string>('REDIS_PASSWORD'),
+          tls: configService.get<string>('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
         },
       }),
       inject: [ConfigService],
