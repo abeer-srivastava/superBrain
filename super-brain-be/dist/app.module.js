@@ -38,14 +38,40 @@ exports.AppModule = AppModule = __decorate([
             }),
             bullmq_1.BullModule.forRootAsync({
                 imports: [config_1.ConfigModule],
-                useFactory: async (configService) => ({
-                    connection: {
-                        host: configService.get('REDIS_HOST', '127.0.0.1'),
-                        port: configService.get('REDIS_PORT', 6379),
-                        password: configService.get('REDIS_PASSWORD'),
-                        tls: configService.get('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
-                    },
-                }),
+                useFactory: async (configService) => {
+                    const redisUrl = configService.get('REDIS_URL');
+                    if (redisUrl) {
+                        try {
+                            const parsed = new URL(redisUrl);
+                            return {
+                                connection: {
+                                    host: parsed.hostname,
+                                    port: parsed.port ? parseInt(parsed.port) : 6379,
+                                    username: parsed.username || undefined,
+                                    password: parsed.password || undefined,
+                                    tls: parsed.protocol === 'rediss:' || redisUrl.includes('upstash.io') ? {} : undefined,
+                                },
+                            };
+                        }
+                        catch (e) {
+                            return {
+                                connection: {
+                                    host: redisUrl.replace(/^https?:\/\//, ''),
+                                    port: 6379,
+                                    tls: redisUrl.includes('upstash.io') ? {} : undefined,
+                                },
+                            };
+                        }
+                    }
+                    return {
+                        connection: {
+                            host: configService.get('REDIS_HOST', '127.0.0.1').replace(/^https?:\/\//, ''),
+                            port: configService.get('REDIS_PORT', 6379),
+                            password: configService.get('REDIS_PASSWORD'),
+                            tls: configService.get('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
+                        },
+                    };
+                },
                 inject: [config_1.ConfigService],
             }),
             auth_module_1.AuthModule,

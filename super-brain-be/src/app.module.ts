@@ -29,15 +29,27 @@ import { ShareModule } from './share/share.module';
       useFactory: async (configService: ConfigService) => {
         const redisUrl = configService.get<string>('REDIS_URL');
         if (redisUrl) {
-          // If it's a rediss:// URL, ioredis handles TLS automatically
-          return {
-            connection: redisUrl.startsWith('rediss://')
-              ? redisUrl
-              : {
-                  url: redisUrl,
-                  tls: redisUrl.includes('upstash.io') ? {} : undefined,
-                },
-          };
+          try {
+            const parsed = new URL(redisUrl);
+            return {
+              connection: {
+                host: parsed.hostname,
+                port: parsed.port ? parseInt(parsed.port) : 6379,
+                username: parsed.username || undefined,
+                password: parsed.password || undefined,
+                tls: parsed.protocol === 'rediss:' || redisUrl.includes('upstash.io') ? {} : undefined,
+              },
+            };
+          } catch (e) {
+            // Fallback if URL parsing fails
+            return {
+              connection: {
+                host: redisUrl.replace(/^https?:\/\//, ''),
+                port: 6379,
+                tls: redisUrl.includes('upstash.io') ? {} : undefined,
+              },
+            };
+          }
         }
         return {
           connection: {
