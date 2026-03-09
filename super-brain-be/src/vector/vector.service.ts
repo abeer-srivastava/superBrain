@@ -11,6 +11,7 @@ export class VectorService implements OnModuleInit {
   constructor(private configService: ConfigService) {
     this.client = new QdrantClient({
       url: this.configService.get<string>('QDRANT_URL', 'http://127.0.0.1:6333'),
+      apiKey: this.configService.get<string>('QDRANT_API_KEY'),
     });
   }
 
