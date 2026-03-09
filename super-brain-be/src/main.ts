@@ -9,7 +9,11 @@ async function bootstrap() {
   
   // Enable CORS with more explicit settings
   app.enableCors({
-    origin: true, // Reflect request origin (useful for development)
+    origin: (origin, callback) => {
+      // Allow all origins for now to fix connection issues
+      // You can restrict this later to your specific vercel domain
+      callback(null, true);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
