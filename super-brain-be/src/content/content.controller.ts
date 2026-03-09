@@ -6,7 +6,7 @@ import { CreateContentSchema } from './dto/content.dto';
 import { QueueService } from '../queue/queue.service';
 import type { Express } from 'express';
 
-@Controller('api/v1/content')
+@Controller('content')
 @UseGuards(JwtAuthGuard)
 export class ContentController {
   constructor(

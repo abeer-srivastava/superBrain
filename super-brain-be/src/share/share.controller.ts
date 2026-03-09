@@ -4,7 +4,7 @@ import { ShareService } from './share.service';
 import { ContentService } from '../content/content.service';
 import { UserService } from '../user/user.service';
 
-@Controller('api/v1/brain')
+@Controller('brain')
 export class ShareController {
   constructor(
     private readonly shareService: ShareService,

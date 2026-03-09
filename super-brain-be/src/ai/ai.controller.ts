@@ -5,7 +5,7 @@ import { VectorService } from '../vector/vector.service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 
-@Controller('api/v1/ai')
+@Controller('ai')
 @UseGuards(JwtAuthGuard)
 export class AiController {
   private genAI: GoogleGenerativeAI;

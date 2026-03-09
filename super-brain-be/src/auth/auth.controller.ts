@@ -2,7 +2,7 @@ import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignupSchema, SigninSchema, SignupDto, SigninDto } from './dto/auth.dto';
 
-@Controller('api/v1')
+@Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
