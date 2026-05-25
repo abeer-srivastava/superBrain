@@ -23,7 +23,7 @@ export class VectorService implements OnModuleInit {
       if (!exists) {
         await this.client.createCollection(this.collectionName, {
           vectors: {
-            size: 384, // MiniLM-L6-v2 dimension
+            size: 768, // Gemini text-embedding-004 dimension
             distance: 'Cosine',
           },
         });

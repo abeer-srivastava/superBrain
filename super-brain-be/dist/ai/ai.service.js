@@ -13,29 +13,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const generative_ai_1 = require("@google/generative-ai");
 let AiService = AiService_1 = class AiService {
     configService;
-    pipeline;
+    genAI;
     logger = new common_1.Logger(AiService_1.name);
     constructor(configService) {
         this.configService = configService;
-    }
-    async onModuleInit() {
-        try {
-            const { pipeline } = await import('@xenova/transformers');
-            this.pipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-            this.logger.log('Xenova pipeline loaded successfully.');
+        const apiKey = this.configService.get('GEMINI_API_KEY');
+        if (!apiKey) {
+            this.logger.error('GEMINI_API_KEY is not set! Embedding generation will fail.');
         }
-        catch (error) {
-            this.logger.error('Failed to load Xenova pipeline', error);
+        else {
+            this.genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
+            this.logger.log('Gemini embedding service ready.');
         }
     }
     async generateEmbedding(text) {
-        if (!this.pipeline) {
-            throw new Error('Pipeline not initialized');
+        if (!this.genAI) {
+            throw new Error('Gemini API not configured — GEMINI_API_KEY is missing');
         }
-        const output = await this.pipeline(text, { pooling: 'mean', normalize: true });
-        return Array.from(output.data);
+        const model = this.genAI.getGenerativeModel({ model: 'text-embedding-004' });
+        const result = await model.embedContent(text);
+        return result.embedding.values;
     }
     chunkText(text, chunkSize = 500, overlap = 100) {
         const words = text.split(/\s+/);

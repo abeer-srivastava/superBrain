@@ -33,7 +33,7 @@ let VectorService = VectorService_1 = class VectorService {
             if (!exists) {
                 await this.client.createCollection(this.collectionName, {
                     vectors: {
-                        size: 384,
+                        size: 768,
                         distance: 'Cosine',
                     },
                 });
