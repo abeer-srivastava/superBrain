@@ -1,12 +1,9 @@
 import { AiService } from './ai.service';
 import { VectorService } from '../vector/vector.service';
-import { ConfigService } from '@nestjs/config';
 export declare class AiController {
     private aiService;
     private vectorService;
-    private configService;
-    private genAI;
-    constructor(aiService: AiService, vectorService: VectorService, configService: ConfigService);
+    constructor(aiService: AiService, vectorService: VectorService);
     search(req: any, query: string): Promise<{
         id: import("node_modules/@qdrant/js-client-rest/dist/types/openapi/generated_schema.js", { with: { "resolution-mode": "import" } }).components["schemas"]["ExtendedPointId"];
         version: number;
@@ -18,15 +15,14 @@ export declare class AiController {
     }[]>;
     ask(req: any, body: {
         query: string;
+        history?: {
+            role: 'user' | 'assistant';
+            content: string;
+        }[];
     }): Promise<{
-        answer: string;
-        context: string;
-        sources?: undefined;
-    } | {
         answer: string;
         sources: (Record<string, unknown> | {
             [key: string]: unknown;
         } | null | undefined)[];
-        context?: undefined;
     }>;
 }

@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import { Queue } from 'bullmq';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 function getRedisConnection() {
   const redisUrl = process.env.REDIS_URL;
@@ -59,7 +62,12 @@ async function main() {
             : false,
         },
         {
-          jobId: `reindex-${String(content._id)}`,
+          jobId: `reindex-v3-${String(content._id)}`,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
           removeOnComplete: 1000,
           removeOnFail: 1000,
         },

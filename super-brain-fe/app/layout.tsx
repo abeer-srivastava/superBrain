@@ -5,6 +5,8 @@ import { Navbar } from "@/components/Navbar";
 import { Sidebar } from "@/components/Sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 
+import { Suspense } from "react";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -25,7 +27,9 @@ export default function RootLayout({
       <body className={`${inter.variable} antialiased`}>
         <AuthProvider>
           <div className="flex min-h-screen bg-background text-foreground">
-            <Sidebar />
+            <Suspense fallback={<div className="w-72 h-screen border-r-4 border-border bg-background hidden lg:block" />}>
+              <Sidebar />
+            </Suspense>
             <div className="flex-1 flex flex-col">
               <main className="flex-1 overflow-y-auto">
                 {children}

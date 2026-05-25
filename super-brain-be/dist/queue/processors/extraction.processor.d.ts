@@ -13,4 +13,6 @@ export declare class ExtractionProcessor extends WorkerHost {
     private extractFromLink;
     private extractFromPdf;
     private extractFromFile;
+    private isYouTubeUrl;
+    private extractFromYouTube;
 }

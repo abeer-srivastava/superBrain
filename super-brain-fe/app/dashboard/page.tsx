@@ -7,9 +7,9 @@ import { useContent } from "@/hooks/useContent";
 import { useShareBrain } from "@/hooks/useShareBrain";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Share2, Copy, Check, Filter, Slack } from "lucide-react";
+import { Share2, Copy, Check, Filter, Slack, Hash } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 function DashboardContent() {
@@ -19,10 +19,33 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const typeFilter = searchParams.get("type");
 
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  const allTags = useMemo(() => {
+    const tagsSet = new Set<string>();
+    contents.forEach(c => {
+      if (Array.isArray(c.tags)) {
+        c.tags.forEach(t => tagsSet.add(t.toLowerCase()));
+      }
+    });
+    return Array.from(tagsSet).sort();
+  }, [contents]);
+
+  // Reset tag selection when type filter changes
+  useEffect(() => {
+    setSelectedTag(null);
+  }, [typeFilter]);
+
   const filteredContents = useMemo(() => {
-    if (!typeFilter) return contents;
-    return contents.filter(c => c.type === typeFilter);
-  }, [contents, typeFilter]);
+    let result = contents;
+    if (typeFilter) {
+      result = result.filter(c => c.type === typeFilter);
+    }
+    if (selectedTag) {
+      result = result.filter(c => c.tags?.map(t => t.toLowerCase()).includes(selectedTag.toLowerCase()));
+    }
+    return result;
+  }, [contents, typeFilter, selectedTag]);
 
   const handleCopyLink = () => {
     if (shareLink) {
@@ -123,6 +146,45 @@ function DashboardContent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Tags Filter Cloud */}
+        {allTags.length > 0 && (
+          <Card className="border-4 border-border shadow-[var(--shadow)]">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Hash className="w-5 h-5 text-main" />
+                Filter by Tag
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedTag(null)}
+                  className={`px-3 py-1 rounded-[var(--radius-base)] border-2 border-border font-heading font-bold text-xs uppercase transition-all shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-[2px] active:shadow-none ${
+                    selectedTag === null
+                      ? "bg-main text-main-foreground"
+                      : "bg-background text-foreground hover:bg-secondary-background"
+                  }`}
+                >
+                  All Tags
+                </button>
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                    className={`px-3 py-1 rounded-[var(--radius-base)] border-2 border-border font-heading font-bold text-xs uppercase transition-all shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-[2px] active:shadow-none ${
+                      selectedTag === tag
+                        ? "bg-main text-main-foreground"
+                        : "bg-background text-foreground hover:bg-secondary-background"
+                    }`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Content List */}
         <div>

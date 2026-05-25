@@ -1,0 +1,12 @@
+name = "super-brain-be-hono"
+main = "src/index.ts"
+compatibility_date = "2024-11-12"
+compatibility_flags = [ "nodejs_compat" ]
+
+[vars]
+# You can place public non-secret config variables here.
+# Private secrets should be set using wrangler secret command or Cloudflare dashboard.
+PINECONE_INDEX_NAME = "super-brain-embed"
+JWT_Password = "abeer@123"
+
+# Binding configuration for KV, D1, hyperdrive, etc. can go here.

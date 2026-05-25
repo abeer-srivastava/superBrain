@@ -14,6 +14,7 @@ const content_service_1 = require("./content.service");
 const content_controller_1 = require("./content.controller");
 const content_schema_1 = require("./schemas/content.schema");
 const queue_module_1 = require("../queue/queue.module");
+const vector_module_1 = require("../vector/vector.module");
 const multer_1 = require("multer");
 const path_1 = require("path");
 let ContentModule = class ContentModule {
@@ -24,6 +25,7 @@ exports.ContentModule = ContentModule = __decorate([
         imports: [
             mongoose_1.MongooseModule.forFeature([{ name: content_schema_1.Content.name, schema: content_schema_1.ContentSchema }]),
             (0, common_1.forwardRef)(() => queue_module_1.QueueModule),
+            vector_module_1.VectorModule,
             platform_express_1.MulterModule.register({
                 storage: (0, multer_1.diskStorage)({
                     destination: './uploads',

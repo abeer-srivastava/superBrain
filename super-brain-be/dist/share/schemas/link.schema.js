@@ -18,7 +18,7 @@ let Link = class Link {
 };
 exports.Link = Link;
 __decorate([
-    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'User', required: true }),
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'User', required: true, index: true }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], Link.prototype, "userId", void 0);
 __decorate([

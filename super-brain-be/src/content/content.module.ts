@@ -5,6 +5,7 @@ import { ContentService } from './content.service';
 import { ContentController } from './content.controller';
 import { Content, ContentSchema } from './schemas/content.schema';
 import { QueueModule } from '../queue/queue.module';
+import { VectorModule } from '../vector/vector.module';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
@@ -12,6 +13,7 @@ import { extname } from 'path';
   imports: [
     MongooseModule.forFeature([{ name: Content.name, schema: ContentSchema }]),
     forwardRef(() => QueueModule),
+    VectorModule,
     MulterModule.register({
       storage: diskStorage({
         destination: './uploads',

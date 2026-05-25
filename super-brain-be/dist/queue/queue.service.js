@@ -22,7 +22,15 @@ let QueueService = class QueueService {
         this.extractionQueue = extractionQueue;
     }
     async addExtractionJob(contentId, type, payload) {
-        await this.extractionQueue.add('extract', { contentId, type, ...payload });
+        await this.extractionQueue.add('extract', { contentId, type, ...payload }, {
+            attempts: 3,
+            backoff: {
+                type: 'exponential',
+                delay: 5000,
+            },
+            removeOnComplete: 100,
+            removeOnFail: 500,
+        });
     }
 };
 exports.QueueService = QueueService;

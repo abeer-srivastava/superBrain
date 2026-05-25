@@ -8,6 +8,7 @@ import * as cheerio from 'cheerio';
 import { randomUUID } from 'crypto';
 import * as pdf from 'pdf-parse';
 import * as fs from 'fs/promises';
+import { YoutubeTranscript } from 'youtube-transcript';
 
 @Processor('extraction')
 export class ExtractionProcessor extends WorkerHost {
@@ -28,13 +29,14 @@ export class ExtractionProcessor extends WorkerHost {
     try {
       let textToProcess = extractedText || '';
 
-      // 1. Extraction Phase
       if (!textToProcess) {
           if (isLocalFile) {
               textToProcess = await this.extractFromFile(originalLink, type);
           } else if (type === 'link' && originalLink) {
               if (originalLink.toLowerCase().endsWith('.pdf')) {
                   textToProcess = await this.extractFromPdf(originalLink);
+              } else if (this.isYouTubeUrl(originalLink)) {
+                  textToProcess = await this.extractFromYouTube(originalLink);
               } else {
                   textToProcess = await this.extractFromLink(originalLink);
               }
@@ -47,13 +49,31 @@ export class ExtractionProcessor extends WorkerHost {
         throw new Error('No text extracted');
       }
 
-      // 2. Update metadata in Mongo
-      await this.contentService.updateStatus(contentId, { extractedText: textToProcess });
+      // 2. AI Phase: Summarization and Tagging
+      this.logger.log(`Generating summary and tags for content ${contentId}`);
+      const [summary, tags] = await Promise.all([
+        this.aiService.summarizeContent(textToProcess),
+        this.aiService.generateTags(textToProcess),
+      ]);
 
-      // 3. Chunking
+      // 3. Update metadata in Mongo
+      await this.contentService.updateStatus(contentId, { 
+        extractedText: textToProcess,
+        summary,
+        tags
+      });
+
+      // 4. Clean up old vectors if any exist for this contentId
+      try {
+        await this.vectorService.deleteByContentId(contentId);
+      } catch (err) {
+        this.logger.warn(`Could not delete old vectors for contentId ${contentId}: ${err.message}`);
+      }
+
+      // 5. Chunking
       const chunks = this.aiService.chunkText(textToProcess);
       
-      // 4. Embedding & Vector Upsert
+      // 5. Embedding & Vector Upsert
       const points = [];
       const content = await this.contentService.findById(contentId);
       if (!content) {
@@ -62,7 +82,7 @@ export class ExtractionProcessor extends WorkerHost {
 
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const embedding = await this.aiService.generateEmbedding(chunk);
+        const embedding = await this.aiService.generateEmbedding(chunk, false); // isQuery: false for passages
         
         points.push({
           id: randomUUID(),
@@ -85,8 +105,15 @@ export class ExtractionProcessor extends WorkerHost {
 
       this.logger.log(`Job ${job.id} completed successfully`);
     } catch (error) {
-      this.logger.error(`Job ${job.id} failed`, error);
-      await this.contentService.updateStatus(contentId, { status: 'failed' });
+      const attemptsMade = job.attemptsMade ?? 0;
+      const maxAttempts = job.opts.attempts ?? 1;
+      const isLastAttempt = (attemptsMade + 1) >= maxAttempts;
+
+      this.logger.error(`Job ${job.id} failed (attempt ${attemptsMade + 1}/${maxAttempts})`, error);
+
+      if (isLastAttempt) {
+        await this.contentService.updateStatus(contentId, { status: 'failed' });
+      }
       throw error;
     }
   }
@@ -119,5 +146,24 @@ export class ExtractionProcessor extends WorkerHost {
         return "Local image file uploaded. OCR processing pending implementation.";
     }
     return "";
+  }
+
+  private isYouTubeUrl(url: string): boolean {
+    const normalized = url.toLowerCase();
+    return normalized.includes('youtube.com') || normalized.includes('youtu.be');
+  }
+
+  private async extractFromYouTube(url: string): Promise<string> {
+    try {
+      this.logger.log(`Fetching transcript for YouTube video: ${url}`);
+      const transcript = await YoutubeTranscript.fetchTranscript(url);
+      if (!transcript || transcript.length === 0) {
+        throw new Error('No transcript found');
+      }
+      return transcript.map((t) => t.text).join(' ');
+    } catch (error) {
+      this.logger.warn(`Failed to fetch YouTube transcript: ${error.message}. Falling back to standard link parsing.`);
+      return this.extractFromLink(url);
+    }
   }
 }

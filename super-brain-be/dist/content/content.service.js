@@ -33,7 +33,7 @@ let ContentService = class ContentService {
         return this.contentModel.findById(id).exec();
     }
     async updateStatus(id, updates) {
-        return this.contentModel.findByIdAndUpdate(id, updates, { new: true }).exec();
+        return this.contentModel.findByIdAndUpdate(id, updates, { returnDocument: 'after' }).exec();
     }
     async delete(id, userId) {
         return this.contentModel.deleteOne({ _id: id, userId }).exec();

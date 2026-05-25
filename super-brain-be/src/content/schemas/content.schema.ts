@@ -5,7 +5,7 @@ export type ContentDocument = Content & Document;
 
 @Schema({ timestamps: true })
 export class Content {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   userId: Types.ObjectId;
 
   @Prop({ required: true, enum: ['link', 'note', 'pdf', 'image'] })

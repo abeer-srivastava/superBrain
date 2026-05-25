@@ -17,28 +17,19 @@ const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const ai_service_1 = require("./ai.service");
 const vector_service_1 = require("../vector/vector.service");
-const generative_ai_1 = require("@google/generative-ai");
-const config_1 = require("@nestjs/config");
 let AiController = class AiController {
     aiService;
     vectorService;
-    configService;
-    genAI;
-    constructor(aiService, vectorService, configService) {
+    constructor(aiService, vectorService) {
         this.aiService = aiService;
         this.vectorService = vectorService;
-        this.configService = configService;
-        const apiKey = this.configService.get('GEMINI_API_KEY');
-        if (apiKey) {
-            this.genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
-        }
     }
     async search(req, query) {
         try {
             if (!query)
                 throw new common_1.BadRequestException('Query parameter q is required');
             const embedding = await this.aiService.generateEmbedding(query);
-            const results = await this.vectorService.searchSimilar(embedding, req.user.userId, 5);
+            const results = await this.vectorService.searchSimilar(embedding, req.user.userId, 10);
             return results;
         }
         catch (error) {
@@ -52,26 +43,19 @@ let AiController = class AiController {
                 throw new common_1.BadRequestException('query is required in body');
             const embedding = await this.aiService.generateEmbedding(body.query);
             const results = await this.vectorService.searchSimilar(embedding, req.user.userId, 5);
-            const contextChunks = results.map(r => r.payload?.text).join('\n\n');
-            if (!this.genAI) {
-                return { answer: 'Gemini API not configured. Context retrieved successfully.', context: contextChunks };
+            const contextChunks = results
+                .map(r => r.payload?.text)
+                .filter(Boolean)
+                .join('\n\n');
+            if (!contextChunks) {
+                return {
+                    answer: "I couldn't find any relevant content in your brain to answer this question.",
+                    sources: []
+                };
             }
-            const prompt = `
-You are a personal knowledge assistant.
-Answer the question using ONLY the provided context. If the answer is not in the context, say "I don't know based on the provided context."
-
-Context:
-${contextChunks}
-
-Question:
-${body.query}
-`;
-            const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
+            const answer = await this.aiService.askQuestion(contextChunks, body.query, body.history);
             return {
-                answer: text,
+                answer,
                 sources: results.map(r => r.payload),
             };
         }
@@ -102,7 +86,6 @@ exports.AiController = AiController = __decorate([
     (0, common_1.Controller)('ai'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [ai_service_1.AiService,
-        vector_service_1.VectorService,
-        config_1.ConfigService])
+        vector_service_1.VectorService])
 ], AiController);
 //# sourceMappingURL=ai.controller.js.map

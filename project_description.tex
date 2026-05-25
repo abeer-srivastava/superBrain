@@ -1,0 +1,29 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\begin{document}
+
+\section*{2ndBrain \hfill \normalsize \href{https://github.com/your-username/2ndBrain}{[GitHub]} $|$ \href{https://2ndbrain-demo.vercel.app}{[Live Demo]}}
+
+\textbf{Overview:} An AI-powered personal knowledge vault and semantic search engine that ingests links, PDFs, and images, allowing users to query their saved data using natural language. \\
+
+\textbf{Tech Stack:} Next.js, TypeScript, NestJS, MongoDB, Qdrant (Vector DB), Gemini AI, BullMQ, Tailwind CSS. \\
+
+\textbf{Role:} Lead Full-Stack Developer (Individual) \\
+
+\textbf{Key Features:}
+\begin{itemize}[leftmargin=*, noitemsep]
+    \item \textbf{Multi-Source Ingestion:} Extracts text from URLs, YouTube transcripts, PDFs (pdf-parse), and images (OCR) via asynchronous background workers (BullMQ).
+    \item \textbf{RAG \& Semantic Search:} Implemented Retrieval-Augmented Generation using Qdrant and Gemini AI to provide precise, context-aware answers from personal data.
+    \item \textbf{Public Sharing:} Engineered secure hash-link generation to share curated knowledge collections publicly.
+\end{itemize}
+
+\textbf{Problem Solved:} Eliminates information fragmentation by providing a single, intelligent repository that retrieves specific insights from scattered digital consumption without manual organization. \\
+
+\textbf{Outcome:} Delivered a high-performance prototype with sub-2-second query responses and scalable background processing, significantly reducing the time spent retrieving personal research.
+
+\end{document}

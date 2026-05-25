@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var ContentController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContentController = void 0;
 const common_1 = require("@nestjs/common");
@@ -19,12 +20,16 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const content_service_1 = require("./content.service");
 const content_dto_1 = require("./dto/content.dto");
 const queue_service_1 = require("../queue/queue.service");
-let ContentController = class ContentController {
+const vector_service_1 = require("../vector/vector.service");
+let ContentController = ContentController_1 = class ContentController {
     contentService;
     queueService;
-    constructor(contentService, queueService) {
+    vectorService;
+    logger = new common_1.Logger(ContentController_1.name);
+    constructor(contentService, queueService, vectorService) {
         this.contentService = contentService;
         this.queueService = queueService;
+        this.vectorService = vectorService;
     }
     async create(req, body) {
         const parsed = content_dto_1.CreateContentSchema.safeParse(body);
@@ -68,6 +73,12 @@ let ContentController = class ContentController {
         return this.contentService.findByUser(req.user.userId);
     }
     async delete(req, id) {
+        try {
+            await this.vectorService.deleteByContentId(id);
+        }
+        catch (error) {
+            this.logger.warn(`Failed to delete vectors for content ${id}, proceeding with content deletion: ${error.message ?? error}`);
+        }
         return this.contentService.delete(id, req.user.userId);
     }
 };
@@ -82,7 +93,9 @@ __decorate([
 ], ContentController.prototype, "create", null);
 __decorate([
     (0, common_1.Post)('upload'),
-    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
+        limits: { fileSize: 10 * 1024 * 1024 }
+    })),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.UploadedFile)()),
     __param(2, (0, common_1.Body)()),
@@ -105,10 +118,11 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], ContentController.prototype, "delete", null);
-exports.ContentController = ContentController = __decorate([
+exports.ContentController = ContentController = ContentController_1 = __decorate([
     (0, common_1.Controller)('content'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [content_service_1.ContentService,
-        queue_service_1.QueueService])
+        queue_service_1.QueueService,
+        vector_service_1.VectorService])
 ], ContentController);
 //# sourceMappingURL=content.controller.js.map

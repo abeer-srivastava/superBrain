@@ -5,7 +5,7 @@ export type LinkDocument = Link & Document;
 
 @Schema({ timestamps: true })
 export class Link {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   userId: Types.ObjectId;
 
   @Prop({ required: true, unique: true })

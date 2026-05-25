@@ -21,27 +21,72 @@ let VectorService = VectorService_1 = class VectorService {
     logger = new common_1.Logger(VectorService_1.name);
     constructor(configService) {
         this.configService = configService;
-        this.client = new js_client_rest_1.QdrantClient({
-            url: this.configService.get('QDRANT_URL', 'http://127.0.0.1:6333'),
+        const url = this.configService.get('QDRANT_URL', 'http://127.0.0.1:6333');
+        const options = {
+            url,
             apiKey: this.configService.get('QDRANT_API_KEY'),
-        });
+            checkCompatibility: false,
+        };
+        if (url.startsWith('https://')) {
+            const match = url.match(/:(\d+)$/);
+            options.port = match ? parseInt(match[1], 10) : 443;
+        }
+        this.client = new js_client_rest_1.QdrantClient(options);
     }
     async onModuleInit() {
         try {
             const collections = await this.client.getCollections();
             const exists = collections.collections.find((c) => c.name === this.collectionName);
             if (!exists) {
-                await this.client.createCollection(this.collectionName, {
-                    vectors: {
-                        size: 768,
-                        distance: 'Cosine',
-                    },
-                });
-                this.logger.log(`Created Qdrant collection: ${this.collectionName}`);
+                await this.createCollection();
+            }
+            else {
+                this.logger.log(`Using existing Qdrant collection: ${this.collectionName}`);
+                await this.ensurePayloadIndexes();
             }
         }
         catch (error) {
             this.logger.error('Failed to initialize Qdrant collection', error);
+        }
+    }
+    async createCollection() {
+        await this.client.createCollection(this.collectionName, {
+            vectors: {
+                size: 4096,
+                distance: 'Cosine',
+            },
+        });
+        await this.ensurePayloadIndexes();
+        this.logger.log(`Created Qdrant collection: ${this.collectionName} with dimension 4096 and payload indexes`);
+    }
+    async ensurePayloadIndexes() {
+        const indexes = [
+            { field_name: 'userId', field_schema: 'keyword' },
+            { field_name: 'contentId', field_schema: 'keyword' },
+        ];
+        for (const idx of indexes) {
+            try {
+                await this.client.createPayloadIndex(this.collectionName, {
+                    field_name: idx.field_name,
+                    field_schema: idx.field_schema,
+                    wait: true,
+                });
+                this.logger.log(`Ensured payload index: ${idx.field_name} (${idx.field_schema})`);
+            }
+            catch (error) {
+                this.logger.warn(`Could not create index for ${idx.field_name}: ${error.message ?? error}`);
+            }
+        }
+    }
+    async resetCollection() {
+        try {
+            await this.client.deleteCollection(this.collectionName);
+            await this.createCollection();
+            this.logger.log('Collection reset successfully');
+        }
+        catch (error) {
+            this.logger.error('Failed to reset collection', error);
+            throw error;
         }
     }
     async upsertVectors(points) {
@@ -67,19 +112,26 @@ let VectorService = VectorService_1 = class VectorService {
         });
     }
     async deleteByContentId(contentId) {
-        await this.client.delete(this.collectionName, {
-            wait: true,
-            filter: {
-                must: [
-                    {
-                        key: 'contentId',
-                        match: {
-                            value: contentId,
+        try {
+            await this.client.delete(this.collectionName, {
+                wait: true,
+                filter: {
+                    must: [
+                        {
+                            key: 'contentId',
+                            match: {
+                                value: contentId,
+                            },
                         },
-                    },
-                ],
-            },
-        });
+                    ],
+                },
+            });
+            this.logger.log(`Deleted vectors for contentId: ${contentId}`);
+        }
+        catch (error) {
+            this.logger.error(`Failed to delete vectors for contentId ${contentId}`, error);
+            throw error;
+        }
     }
 };
 exports.VectorService = VectorService;

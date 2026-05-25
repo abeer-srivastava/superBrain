@@ -21,7 +21,7 @@ export class ContentService {
   }
 
   async updateStatus(id: string, updates: Partial<Content>): Promise<ContentDocument | null> {
-    return this.contentModel.findByIdAndUpdate(id, updates, { new: true }).exec();
+    return this.contentModel.findByIdAndUpdate(id, updates, { returnDocument: 'after' }).exec();
   }
 
   async delete(id: string, userId: string): Promise<any> {

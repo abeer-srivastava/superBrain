@@ -7,6 +7,9 @@ export declare class VectorService implements OnModuleInit {
     private readonly logger;
     constructor(configService: ConfigService);
     onModuleInit(): Promise<void>;
+    createCollection(): Promise<void>;
+    private ensurePayloadIndexes;
+    resetCollection(): Promise<void>;
     upsertVectors(points: {
         id: string;
         vector: number[];

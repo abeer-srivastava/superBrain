@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   Brain, 
@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentType = searchParams.get("type");
   const { isAuthenticated, user, logout } = useAuth();
 
   if (!isAuthenticated) return null;
@@ -56,7 +58,13 @@ export function Sidebar() {
       <div className="flex-1 space-y-2">
         {mainNav.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = (() => {
+            const url = new URL(item.href, "http://localhost");
+            const targetPath = url.pathname;
+            const targetType = url.searchParams.get("type");
+            if (pathname !== targetPath) return false;
+            return currentType === targetType;
+          })();
           
           return (
             <Link key={item.label} href={item.href}>

@@ -150,9 +150,10 @@ export const searchAPI = {
             type: item.payload?.type || "unknown"
         }));
     },
-    ask: async (query: string) => {
+    ask: async (query: string, history?: { role: 'user' | 'assistant'; content: string }[]) => {
         const response = await api.post<{ answer: string; sources: any[] }>(`ai/ask`, {
             query,
+            history,
         });
         return response.data;
     }
