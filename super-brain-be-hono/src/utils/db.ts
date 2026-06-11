@@ -37,19 +37,25 @@ let cachedClient: MongoClient | null = null;
 
 export async function getDb(mongoUrl: string): Promise<Db> {
   if (cachedClient) {
-    return cachedClient.db("superBrain");
+    return cachedClient.db("superbrain");
   }
 
   if (!mongoUrl) {
     throw new Error("MONGO_URL environment variable is missing.");
   }
 
-  // Create a MongoClient with Node.js compatibility socket options
-  const client = new MongoClient(mongoUrl);
+  // Create a MongoClient optimized for Cloudflare Workers
+  const client = new MongoClient(mongoUrl, {
+    maxPoolSize: 1,
+    minPoolSize: 0,
+    serverSelectionTimeoutMS: 15000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 15000,
+  });
   await client.connect();
   cachedClient = client;
 
-  return client.db("superBrain");
+  return client.db("superbrain");
 }
 
 export async function getUsersCollection(mongoUrl: string) {

@@ -69,7 +69,7 @@ userRouter.post("/signup", async (c) => {
   } catch (error) {
     console.error("error during signup", error);
     c.status(500);
-    return c.json({ message: "Error occurred during signup" });
+    return c.json({ message: "Error occurred during signup", error: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -113,7 +113,7 @@ userRouter.post("/signin", async (c) => {
   } catch (error) {
     console.error("Error occurred during User Fetching", error);
     c.status(500);
-    return c.json({ message: "Internal server error" });
+    return c.json({ message: "Internal server error", error: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -404,6 +404,30 @@ userRouter.get("/brain/:shareLink", async (c) => {
     console.error("Error fetching shared brain content", error);
     c.status(500);
     return c.json({ message: "Internal server error" });
+  }
+});
+
+// Debug Route for Environment Config Validation
+userRouter.get("/debug", async (c) => {
+  const url = c.env.MONGO_URL;
+  if (!url) {
+    return c.json({ status: "missing" });
+  }
+  try {
+    const cleanUrl = url.replace("mongodb+srv://", "http://").replace("mongodb://", "http://");
+    const parsed = new URL(cleanUrl);
+    return c.json({
+      status: "present",
+      protocol: url.startsWith("mongodb+srv") ? "mongodb+srv" : "mongodb",
+      host: parsed.host,
+      pathname: parsed.pathname
+    });
+  } catch (e) {
+    return c.json({
+      status: "error",
+      message: e instanceof Error ? e.message : String(e),
+      preview: url.substring(0, Math.min(15, url.length)) + "..."
+    });
   }
 });
 

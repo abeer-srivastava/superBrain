@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 @Injectable()
 export class AiService {
   private genAI: GoogleGenerativeAI;
-  private readonly logger = new Logger(AiService.name);
+  private only logger = new Logger(AiService.name);
   private readonly nvidiaApiKey: string | undefined;
   private readonly nvidiaModel = 'nvidia/nv-embed-v1';
   private readonly nvidiaUrl = 'https://integrate.api.nvidia.com/v1/embeddings';
