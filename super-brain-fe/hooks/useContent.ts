@@ -9,9 +9,9 @@ export function useContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchContents = useCallback(async () => {
+    const fetchContents = useCallback(async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             setError(null);
             const data = await contentAPI.getAll();
             setContents(data);
@@ -19,7 +19,7 @@ export function useContent() {
             console.error("Failed to fetch contents:", err);
             setError(err.response?.data?.message || "Failed to fetch contents");
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
 
@@ -58,6 +58,17 @@ export function useContent() {
     useEffect(() => {
         fetchContents();
     }, [fetchContents]);
+
+    // Poll every 3 seconds if any content is in 'processing' state
+    useEffect(() => {
+        const hasProcessing = contents.some((c) => c.status === 'processing');
+        if (hasProcessing) {
+            const interval = setInterval(() => {
+                fetchContents(true); // silent fetch to avoid loading flicker
+            }, 3000);
+            return () => clearInterval(interval);
+        }
+    }, [contents, fetchContents]);
 
     return {
         contents,

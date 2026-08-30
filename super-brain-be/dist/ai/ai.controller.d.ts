@@ -1,9 +1,14 @@
 import { AiService } from './ai.service';
+import { EmbeddingService } from './embedding.service';
 import { VectorService } from '../vector/vector.service';
+import { ContentService } from '../content/content.service';
 export declare class AiController {
     private aiService;
+    private embeddingService;
     private vectorService;
-    constructor(aiService: AiService, vectorService: VectorService);
+    private contentService;
+    private readonly logger;
+    constructor(aiService: AiService, embeddingService: EmbeddingService, vectorService: VectorService, contentService: ContentService);
     search(req: any, query: string): Promise<{
         id: import("node_modules/@qdrant/js-client-rest/dist/types/openapi/generated_schema.js", { with: { "resolution-mode": "import" } }).components["schemas"]["ExtendedPointId"];
         version: number;
@@ -21,8 +26,16 @@ export declare class AiController {
         }[];
     }): Promise<{
         answer: string;
-        sources: (Record<string, unknown> | {
-            [key: string]: unknown;
-        } | null | undefined)[];
+        sources: any[];
+    }>;
+    reindex(req: any): Promise<{
+        total: number;
+        reindexed: number;
+        skipped: number;
+        failed: number;
+        errors: {
+            contentId: string;
+            error: string;
+        }[] | undefined;
     }>;
 }

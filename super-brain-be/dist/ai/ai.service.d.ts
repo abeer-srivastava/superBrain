@@ -2,12 +2,9 @@ import { ConfigService } from '@nestjs/config';
 export declare class AiService {
     private configService;
     private genAI;
-    private readonly logger;
-    private readonly nvidiaApiKey;
-    private readonly nvidiaModel;
-    private readonly nvidiaUrl;
+    private logger;
+    private readonly llmModel;
     constructor(configService: ConfigService);
-    generateEmbedding(text: string, isQuery?: boolean): Promise<number[]>;
     private runWithRetry;
     summarizeContent(text: string): Promise<string>;
     generateTags(text: string): Promise<string[]>;
@@ -15,5 +12,5 @@ export declare class AiService {
         role: 'user' | 'assistant';
         content: string;
     }[]): Promise<string>;
-    chunkText(text: string, chunkSize?: number, overlap?: number): string[];
+    chunkText(text: string, maxWords?: number, overlapWords?: number): string[];
 }

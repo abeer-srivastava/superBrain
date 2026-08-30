@@ -9,17 +9,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiModule = void 0;
 const common_1 = require("@nestjs/common");
 const ai_service_1 = require("./ai.service");
+const embedding_service_1 = require("./embedding.service");
 const ai_controller_1 = require("./ai.controller");
 const vector_module_1 = require("../vector/vector.module");
+const content_module_1 = require("../content/content.module");
 let AiModule = class AiModule {
 };
 exports.AiModule = AiModule;
 exports.AiModule = AiModule = __decorate([
     (0, common_1.Module)({
-        imports: [vector_module_1.VectorModule],
+        imports: [vector_module_1.VectorModule, (0, common_1.forwardRef)(() => content_module_1.ContentModule)],
         controllers: [ai_controller_1.AiController],
-        providers: [ai_service_1.AiService],
-        exports: [ai_service_1.AiService],
+        providers: [ai_service_1.AiService, embedding_service_1.EmbeddingService],
+        exports: [ai_service_1.AiService, embedding_service_1.EmbeddingService],
     })
 ], AiModule);
 //# sourceMappingURL=ai.module.js.map

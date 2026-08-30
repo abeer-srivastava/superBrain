@@ -4,6 +4,7 @@ export declare class VectorService implements OnModuleInit {
     private configService;
     private client;
     private readonly collectionName;
+    private readonly vectorSize;
     private readonly logger;
     constructor(configService: ConfigService);
     onModuleInit(): Promise<void>;

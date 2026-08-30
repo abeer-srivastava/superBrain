@@ -6,6 +6,7 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 export class VectorService implements OnModuleInit {
   private client: QdrantClient;
   private readonly collectionName = 'secondbrain';
+  private readonly vectorSize = 384; // all-MiniLM-L6-v2 (local)
   private readonly logger = new Logger(VectorService.name);
 
   constructor(private configService: ConfigService) {
@@ -33,9 +34,23 @@ export class VectorService implements OnModuleInit {
       if (!exists) {
         await this.createCollection();
       } else {
-        this.logger.log(`Using existing Qdrant collection: ${this.collectionName}`);
-        // Ensure all required payload indexes exist (idempotent — Qdrant ignores duplicates)
-        await this.ensurePayloadIndexes();
+        // Verify dimension compatibility — detect old 4096d NVIDIA vectors
+        try {
+          const info = await this.client.getCollection(this.collectionName);
+          const currentSize = (info.config.params.vectors as any).size;
+          if (currentSize !== this.vectorSize) {
+            this.logger.warn(
+              `Dimension mismatch detected: collection has ${currentSize}d vectors, expected ${this.vectorSize}d. Recreating collection...`
+            );
+            await this.resetCollection();
+          } else {
+            this.logger.log(`Using existing Qdrant collection: ${this.collectionName} (${this.vectorSize}d)`);
+            await this.ensurePayloadIndexes();
+          }
+        } catch (infoError) {
+          this.logger.warn(`Could not verify collection dimensions: ${infoError.message}. Ensuring indexes...`);
+          await this.ensurePayloadIndexes();
+        }
       }
     } catch (error) {
       this.logger.error('Failed to initialize Qdrant collection', error);
@@ -45,13 +60,13 @@ export class VectorService implements OnModuleInit {
   async createCollection() {
     await this.client.createCollection(this.collectionName, {
       vectors: {
-        size: 4096, // NVIDIA nv-embed-v1 dimension
+        size: this.vectorSize, // Gemini text-embedding-004
         distance: 'Cosine',
       },
     });
 
     await this.ensurePayloadIndexes();
-    this.logger.log(`Created Qdrant collection: ${this.collectionName} with dimension 4096 and payload indexes`);
+    this.logger.log(`Created Qdrant collection: ${this.collectionName} with dimension ${this.vectorSize} and payload indexes`);
   }
 
   /**

@@ -18,56 +18,16 @@ let AiService = AiService_1 = class AiService {
     configService;
     genAI;
     logger = new common_1.Logger(AiService_1.name);
-    nvidiaApiKey;
-    nvidiaModel = 'nvidia/nv-embed-v1';
-    nvidiaUrl = 'https://integrate.api.nvidia.com/v1/embeddings';
+    llmModel = 'gemini-2.5-flash-lite';
     constructor(configService) {
         this.configService = configService;
         const apiKey = this.configService.get('GEMINI_API_KEY');
-        this.nvidiaApiKey = this.configService.get('NVIDIA_API_KEY')?.trim();
         if (!apiKey) {
-            this.logger.error('GEMINI_API_KEY is not set! Summarization will fail.');
+            this.logger.error('GEMINI_API_KEY is not set! LLM features will fail.');
         }
         else {
             this.genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
-        }
-        if (!this.nvidiaApiKey) {
-            this.logger.error('NVIDIA_API_KEY is not set! Embedding generation will fail.');
-        }
-        else {
-            this.logger.log('NVIDIA embedding service ready.');
-        }
-    }
-    async generateEmbedding(text, isQuery = true) {
-        if (!this.nvidiaApiKey) {
-            throw new Error('NVIDIA API not configured — NVIDIA_API_KEY is missing');
-        }
-        try {
-            const response = await fetch(this.nvidiaUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.nvidiaApiKey}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    input: text,
-                    model: this.nvidiaModel,
-                    input_type: isQuery ? 'query' : 'passage',
-                    encoding_format: 'float',
-                    truncate: 'NONE',
-                }),
-            });
-            const rawText = await response.text();
-            if (!response.ok) {
-                this.logger.error(`NVIDIA API Error Response: ${rawText}`);
-                throw new Error(`NVIDIA API Error (${response.status}): ${rawText}`);
-            }
-            const data = JSON.parse(rawText);
-            return data.data[0].embedding;
-        }
-        catch (error) {
-            this.logger.error('Failed to generate NVIDIA embedding', error);
-            throw error;
+            this.logger.log(`LLM service ready — model: ${this.llmModel}`);
         }
     }
     async runWithRetry(fn, maxRetries = 5, initialDelay = 5000) {
@@ -81,7 +41,8 @@ let AiService = AiService_1 = class AiService {
                 const isRateLimit = error.status === 429 ||
                     (error.message && error.message.includes('429')) ||
                     (error.message && error.message.toLowerCase().includes('quota exceeded')) ||
-                    (error.message && error.message.toLowerCase().includes('too many requests'));
+                    (error.message && error.message.toLowerCase().includes('too many requests')) ||
+                    (error.message && error.message.toLowerCase().includes('resource_exhausted'));
                 if (isRateLimit && attempt < maxRetries) {
                     let delay = initialDelay * Math.pow(2, attempt - 1);
                     if (error.errorDetails && Array.isArray(error.errorDetails)) {
@@ -108,7 +69,7 @@ let AiService = AiService_1 = class AiService {
         }
         try {
             return await this.runWithRetry(async () => {
-                const model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+                const model = this.genAI.getGenerativeModel({ model: this.llmModel });
                 const prompt = `
 You are a summarizing utility for a personal knowledge base.
 Summarize the following content concisely (1-2 sentences, maximum 200 characters).
@@ -136,7 +97,7 @@ ${text.substring(0, 20000)}
         }
         try {
             return await this.runWithRetry(async () => {
-                const model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+                const model = this.genAI.getGenerativeModel({ model: this.llmModel });
                 const prompt = `Based on the following content, generate 3-5 relevant single-word tags (lowercase) for a personal knowledge base. Return only the tags separated by commas: \n\n${text.substring(0, 10000)}`;
                 const result = await model.generateContent(prompt);
                 const tagsText = result.response.text();
@@ -154,7 +115,7 @@ ${text.substring(0, 20000)}
         }
         try {
             return await this.runWithRetry(async () => {
-                const model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+                const model = this.genAI.getGenerativeModel({ model: this.llmModel });
                 let historyText = '';
                 if (history && history.length > 0) {
                     historyText = '\nConversation History:\n' + history
@@ -162,12 +123,16 @@ ${text.substring(0, 20000)}
                         .join('\n') + '\n';
                 }
                 const prompt = `
-You are a personal knowledge assistant (2nd brain).
-Answer the question using the provided context. If the answer is not in the context, say so gracefully.
+You are an intelligent personal knowledge assistant (2nd Brain).
+The user is asking a question about their saved content (they might call it their brain, vault, bookmarks, notes, or links).
+Answer the question based ONLY on the numbered sources below. These sources represent the most relevant content retrieved from their brain.
+Cite source numbers in your answer like [1], [2] when referencing specific information.
+If the sources do not contain enough information to answer the question, say "I don't have information about that in your saved content."
+Be concise, direct, and helpful.
 
-CRITICAL: You must respond in the same language as the user's question. For example, if the question is in English, write your entire response in English, even if the provided context is in Hindi or another language.
+CRITICAL: You must respond in the same language as the user's question.
 
-Context:
+Sources from user's brain:
 ${context}
 ${historyText}
 Question:
@@ -182,14 +147,38 @@ ${question}
             throw error;
         }
     }
-    chunkText(text, chunkSize = 500, overlap = 100) {
-        const words = text.split(/\s+/);
+    chunkText(text, maxWords = 500, overlapWords = 100) {
+        const sentences = text.match(/[^.!?\n]+(?:[.!?]+["'\u201d\u2019)}\]]*|$)|\n+/g) || [text];
+        const cleanedSentences = sentences
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+        if (cleanedSentences.length === 0) {
+            return [text.trim()].filter(t => t.length > 0);
+        }
         const chunks = [];
-        let i = 0;
-        while (i < words.length) {
-            const chunk = words.slice(i, i + chunkSize).join(' ');
-            chunks.push(chunk);
-            i += chunkSize - overlap;
+        let currentChunk = [];
+        let currentWordCount = 0;
+        for (const sentence of cleanedSentences) {
+            const sentenceWordCount = sentence.split(/\s+/).length;
+            if (currentWordCount + sentenceWordCount > maxWords && currentChunk.length > 0) {
+                chunks.push(currentChunk.join(' '));
+                const overlapChunk = [];
+                let overlapCount = 0;
+                for (let j = currentChunk.length - 1; j >= 0 && overlapCount < overlapWords; j--) {
+                    overlapChunk.unshift(currentChunk[j]);
+                    overlapCount += currentChunk[j].split(/\s+/).length;
+                }
+                currentChunk = overlapChunk;
+                currentWordCount = overlapCount;
+            }
+            currentChunk.push(sentence);
+            currentWordCount += sentenceWordCount;
+        }
+        if (currentChunk.length > 0) {
+            const lastChunk = currentChunk.join(' ').trim();
+            if (lastChunk.length > 0) {
+                chunks.push(lastChunk);
+            }
         }
         return chunks;
     }

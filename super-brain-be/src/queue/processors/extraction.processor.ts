@@ -3,12 +3,16 @@ import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { ContentService } from '../../content/content.service';
 import { AiService } from '../../ai/ai.service';
+import { EmbeddingService } from '../../ai/embedding.service';
 import { VectorService } from '../../vector/vector.service';
 import * as cheerio from 'cheerio';
 import { randomUUID } from 'crypto';
 import * as pdf from 'pdf-parse';
 import * as fs from 'fs/promises';
 import { YoutubeTranscript } from 'youtube-transcript';
+
+/** Timeout for external HTTP fetches (30 seconds) */
+const FETCH_TIMEOUT_MS = 30_000;
 
 @Processor('extraction')
 export class ExtractionProcessor extends WorkerHost {
@@ -17,6 +21,7 @@ export class ExtractionProcessor extends WorkerHost {
   constructor(
     private contentService: ContentService,
     private aiService: AiService,
+    private embeddingService: EmbeddingService,
     private vectorService: VectorService,
   ) {
     super();
@@ -27,70 +32,112 @@ export class ExtractionProcessor extends WorkerHost {
     const { contentId, type, originalLink, extractedText, isLocalFile } = job.data;
 
     try {
-      let textToProcess = extractedText || '';
+      // Fetch current state from DB to enable idempotent retries
+      const existingContent = await this.contentService.findById(contentId);
+
+      // ──────────────────────────────────────────────────────────────────
+      // Phase 1: Text Extraction — SKIP if content already has extractedText
+      // ──────────────────────────────────────────────────────────────────
+      let textToProcess = existingContent?.extractedText || extractedText || '';
 
       if (!textToProcess) {
-          if (isLocalFile) {
-              textToProcess = await this.extractFromFile(originalLink, type);
-          } else if (type === 'link' && originalLink) {
-              if (originalLink.toLowerCase().endsWith('.pdf')) {
-                  textToProcess = await this.extractFromPdf(originalLink);
-              } else if (this.isYouTubeUrl(originalLink)) {
-                  textToProcess = await this.extractFromYouTube(originalLink);
-              } else {
-                  textToProcess = await this.extractFromLink(originalLink);
-              }
-          } else if (type === 'pdf' && originalLink) {
-              textToProcess = await this.extractFromPdf(originalLink);
+        this.logger.log(`Extracting text for content ${contentId} (type: ${type})`);
+        if (isLocalFile) {
+          textToProcess = await this.extractFromFile(originalLink, type);
+        } else if (type === 'link' && originalLink) {
+          if (originalLink.toLowerCase().endsWith('.pdf')) {
+            textToProcess = await this.extractFromPdf(originalLink);
+          } else if (this.isYouTubeUrl(originalLink)) {
+            textToProcess = await this.extractFromYouTube(originalLink);
+          } else {
+            textToProcess = await this.extractFromLink(originalLink);
           }
+        } else if (type === 'pdf' && originalLink) {
+          textToProcess = await this.extractFromPdf(originalLink);
+        }
+      } else {
+        this.logger.log(`Skipping extraction — content ${contentId} already has extractedText`);
       }
 
       if (!textToProcess) {
-        throw new Error('No text extracted');
+        throw new Error('No text extracted from content');
       }
 
-      // 2. AI Phase: Summarization and Tagging
-      this.logger.log(`Generating summary and tags for content ${contentId}`);
-      const [summary, tags] = await Promise.all([
-        this.aiService.summarizeContent(textToProcess),
-        this.aiService.generateTags(textToProcess),
-      ]);
+      // Sanitize: remove control characters, excessive whitespace, null bytes
+      textToProcess = textToProcess
+        .replace(/\0/g, '')                    // null bytes
+        .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F]/g, '') // control chars (preserve \n, \r, \t)
+        .replace(/[ \t]+/g, ' ')               // collapse horizontal whitespace
+        .replace(/\n{3,}/g, '\n\n')            // collapse excessive newlines
+        .trim();
 
-      // 3. Update metadata in Mongo
+      // Truncate absurdly long texts to prevent API timeouts
+      const MAX_WORDS = 100_000;
+      const words = textToProcess.split(/\s+/);
+      if (words.length > MAX_WORDS) {
+        this.logger.warn(`Text for content ${contentId} has ${words.length} words — truncating to ${MAX_WORDS}`);
+        textToProcess = words.slice(0, MAX_WORDS).join(' ');
+      }
+
+      // ──────────────────────────────────────────────────────────────────
+      // Phase 2: AI Summarization & Tagging — SKIP if already done
+      // ──────────────────────────────────────────────────────────────────
+      let summary = existingContent?.summary || '';
+      let tags: string[] = existingContent?.tags?.length ? existingContent.tags : [];
+
+      if (!summary || tags.length === 0) {
+        this.logger.log(`Generating summary and tags for content ${contentId}`);
+        const [newSummary, newTags] = await Promise.all([
+          summary ? Promise.resolve(summary) : this.aiService.summarizeContent(textToProcess),
+          tags.length > 0 ? Promise.resolve(tags) : this.aiService.generateTags(textToProcess),
+        ]);
+        summary = newSummary;
+        tags = newTags;
+      } else {
+        this.logger.log(`Skipping summarization — content ${contentId} already has summary/tags`);
+      }
+
+      // Phase 2b: Update metadata in Mongo (idempotent — safe to overwrite with same data)
       await this.contentService.updateStatus(contentId, { 
         extractedText: textToProcess,
         summary,
         tags
       });
 
-      // 4. Clean up old vectors if any exist for this contentId
+      // ──────────────────────────────────────────────────────────────────
+      // Phase 3: Chunking & Embedding — ALWAYS re-run
+      // (This is the phase that most commonly fails, e.g. API errors)
+      // ──────────────────────────────────────────────────────────────────
+
+      // Clean up old vectors if any exist for this contentId
       try {
         await this.vectorService.deleteByContentId(contentId);
       } catch (err) {
         this.logger.warn(`Could not delete old vectors for contentId ${contentId}: ${err.message}`);
       }
 
-      // 5. Chunking
+      // Chunk the text
       const chunks = this.aiService.chunkText(textToProcess);
+      this.logger.log(`Content ${contentId}: ${chunks.length} chunks to embed`);
       
-      // 5. Embedding & Vector Upsert
-      const points = [];
+      // Fetch content metadata for vector payloads
       const content = await this.contentService.findById(contentId);
       if (!content) {
-        throw new Error(`Content not found: ${contentId}`);
+        throw new Error(`Content not found after update: ${contentId}`);
       }
 
+      // Embed all chunks locally — no API calls, no rate limits
+      const embeddings = await this.embeddingService.embedMany(chunks);
+
+      const points: { id: string; vector: number[]; payload: any }[] = [];
       for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        const embedding = await this.aiService.generateEmbedding(chunk, false); // isQuery: false for passages
-        
         points.push({
           id: randomUUID(),
-          vector: embedding,
+          vector: embeddings[i],
           payload: {
             contentId,
             userId: content.userId.toString(),
-            text: chunk,
+            text: chunks[i],
             title: content.title || '',
             link: content.originalLink || '',
             type: content.type,
@@ -98,12 +145,13 @@ export class ExtractionProcessor extends WorkerHost {
         });
       }
 
+      // Upsert all vectors
       await this.vectorService.upsertVectors(points);
 
-      // 5. Mark as ready
+      // Mark as ready
       await this.contentService.updateStatus(contentId, { status: 'ready' });
 
-      this.logger.log(`Job ${job.id} completed successfully`);
+      this.logger.log(`Job ${job.id} completed successfully — ${points.length} vectors upserted`);
     } catch (error) {
       const attemptsMade = job.attemptsMade ?? 0;
       const maxAttempts = job.opts.attempts ?? 1;
@@ -118,17 +166,43 @@ export class ExtractionProcessor extends WorkerHost {
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Content Extraction Methods (with timeouts)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  private async fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      return response;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Fetch timed out after ${FETCH_TIMEOUT_MS / 1000}s for URL: ${url}`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   private async extractFromLink(url: string): Promise<string> {
-    const response = await fetch(url);
+    const response = await this.fetchWithTimeout(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL (${response.status} ${response.statusText}): ${url}`);
+    }
     const html = await response.text();
     const $ = cheerio.load(html);
-    $('script, style').remove();
+    $('script, style, nav, footer, header, aside').remove();
     const text = $('body').text().replace(/\s+/g, ' ').trim();
     return text;
   }
 
   private async extractFromPdf(url: string): Promise<string> {
-    const response = await fetch(url);
+    const response = await this.fetchWithTimeout(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF (${response.status} ${response.statusText}): ${url}`);
+    }
     const buffer = await response.arrayBuffer();
     const parse = (pdf as any).default || pdf;
     const data = await parse(Buffer.from(buffer));

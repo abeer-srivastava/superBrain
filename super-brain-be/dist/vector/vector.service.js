@@ -18,6 +18,7 @@ let VectorService = VectorService_1 = class VectorService {
     configService;
     client;
     collectionName = 'secondbrain';
+    vectorSize = 384;
     logger = new common_1.Logger(VectorService_1.name);
     constructor(configService) {
         this.configService = configService;
@@ -41,8 +42,22 @@ let VectorService = VectorService_1 = class VectorService {
                 await this.createCollection();
             }
             else {
-                this.logger.log(`Using existing Qdrant collection: ${this.collectionName}`);
-                await this.ensurePayloadIndexes();
+                try {
+                    const info = await this.client.getCollection(this.collectionName);
+                    const currentSize = info.config.params.vectors.size;
+                    if (currentSize !== this.vectorSize) {
+                        this.logger.warn(`Dimension mismatch detected: collection has ${currentSize}d vectors, expected ${this.vectorSize}d. Recreating collection...`);
+                        await this.resetCollection();
+                    }
+                    else {
+                        this.logger.log(`Using existing Qdrant collection: ${this.collectionName} (${this.vectorSize}d)`);
+                        await this.ensurePayloadIndexes();
+                    }
+                }
+                catch (infoError) {
+                    this.logger.warn(`Could not verify collection dimensions: ${infoError.message}. Ensuring indexes...`);
+                    await this.ensurePayloadIndexes();
+                }
             }
         }
         catch (error) {
@@ -52,12 +67,12 @@ let VectorService = VectorService_1 = class VectorService {
     async createCollection() {
         await this.client.createCollection(this.collectionName, {
             vectors: {
-                size: 4096,
+                size: this.vectorSize,
                 distance: 'Cosine',
             },
         });
         await this.ensurePayloadIndexes();
-        this.logger.log(`Created Qdrant collection: ${this.collectionName} with dimension 4096 and payload indexes`);
+        this.logger.log(`Created Qdrant collection: ${this.collectionName} with dimension ${this.vectorSize} and payload indexes`);
     }
     async ensurePayloadIndexes() {
         const indexes = [

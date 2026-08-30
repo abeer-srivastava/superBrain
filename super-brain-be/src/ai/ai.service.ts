@@ -5,63 +5,25 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 @Injectable()
 export class AiService {
   private genAI: GoogleGenerativeAI;
-  private only logger = new Logger(AiService.name);
-  private readonly nvidiaApiKey: string | undefined;
-  private readonly nvidiaModel = 'nvidia/nv-embed-v1';
-  private readonly nvidiaUrl = 'https://integrate.api.nvidia.com/v1/embeddings';
+  private  logger = new Logger(AiService.name);
+
+  // --- LLM Model Configuration ---
+  private readonly llmModel = 'gemini-2.5-flash-lite';
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-    this.nvidiaApiKey = this.configService.get<string>('NVIDIA_API_KEY')?.trim();
     
     if (!apiKey) {
-      this.logger.error('GEMINI_API_KEY is not set! Summarization will fail.');
+      this.logger.error('GEMINI_API_KEY is not set! LLM features will fail.');
     } else {
       this.genAI = new GoogleGenerativeAI(apiKey);
-    }
-
-    if (!this.nvidiaApiKey) {
-      this.logger.error('NVIDIA_API_KEY is not set! Embedding generation will fail.');
-    } else {
-      this.logger.log('NVIDIA embedding service ready.');
+      this.logger.log(`LLM service ready — model: ${this.llmModel}`);
     }
   }
 
-  async generateEmbedding(text: string, isQuery = true): Promise<number[]> {
-    if (!this.nvidiaApiKey) {
-      throw new Error('NVIDIA API not configured — NVIDIA_API_KEY is missing');
-    }
-
-    try {
-      const response = await fetch(this.nvidiaUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.nvidiaApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          input: text,
-          model: this.nvidiaModel,
-          input_type: isQuery ? 'query' : 'passage',
-          encoding_format: 'float',
-          truncate: 'NONE',
-        }),
-      });
-
-      const rawText = await response.text();
-
-      if (!response.ok) {
-        this.logger.error(`NVIDIA API Error Response: ${rawText}`);
-        throw new Error(`NVIDIA API Error (${response.status}): ${rawText}`);
-      }
-
-      const data = JSON.parse(rawText);
-      return data.data[0].embedding;
-    } catch (error) {
-      this.logger.error('Failed to generate NVIDIA embedding', error);
-      throw error;
-    }
-  }
+  // ──────────────────────────────────────────────────────────────────────────
+  // Retry Logic — handles Gemini 429 rate limits with exponential backoff
+  // ──────────────────────────────────────────────────────────────────────────
 
   private async runWithRetry<T>(fn: () => Promise<T>, maxRetries = 5, initialDelay = 5000): Promise<T> {
     let attempt = 0;
@@ -74,7 +36,8 @@ export class AiService {
           error.status === 429 ||
           (error.message && error.message.includes('429')) ||
           (error.message && error.message.toLowerCase().includes('quota exceeded')) ||
-          (error.message && error.message.toLowerCase().includes('too many requests'));
+          (error.message && error.message.toLowerCase().includes('too many requests')) ||
+          (error.message && error.message.toLowerCase().includes('resource_exhausted'));
 
         if (isRateLimit && attempt < maxRetries) {
           let delay = initialDelay * Math.pow(2, attempt - 1);
@@ -99,6 +62,10 @@ export class AiService {
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Summarization — generates a concise 1-2 sentence summary
+  // ──────────────────────────────────────────────────────────────────────────
+
   async summarizeContent(text: string): Promise<string> {
     if (!this.genAI) {
       throw new Error('Gemini API not configured');
@@ -106,7 +73,7 @@ export class AiService {
 
     try {
       return await this.runWithRetry(async () => {
-        const model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+        const model = this.genAI.getGenerativeModel({ model: this.llmModel });
         const prompt = `
 You are a summarizing utility for a personal knowledge base.
 Summarize the following content concisely (1-2 sentences, maximum 200 characters).
@@ -129,6 +96,10 @@ ${text.substring(0, 20000)}
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Tag Generation — generates 3-5 relevant tags
+  // ──────────────────────────────────────────────────────────────────────────
+
   async generateTags(text: string): Promise<string[]> {
     if (!this.genAI) {
       throw new Error('Gemini API not configured');
@@ -136,7 +107,7 @@ ${text.substring(0, 20000)}
 
     try {
       return await this.runWithRetry(async () => {
-        const model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+        const model = this.genAI.getGenerativeModel({ model: this.llmModel });
         const prompt = `Based on the following content, generate 3-5 relevant single-word tags (lowercase) for a personal knowledge base. Return only the tags separated by commas: \n\n${text.substring(0, 10000)}`;
         
         const result = await model.generateContent(prompt);
@@ -149,6 +120,10 @@ ${text.substring(0, 20000)}
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // RAG Q&A — answers questions grounded in user's content with citations
+  // ──────────────────────────────────────────────────────────────────────────
+
   async askQuestion(
     context: string,
     question: string,
@@ -160,7 +135,7 @@ ${text.substring(0, 20000)}
 
     try {
       return await this.runWithRetry(async () => {
-        const model = this.genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' });
+        const model = this.genAI.getGenerativeModel({ model: this.llmModel });
         
         let historyText = '';
         if (history && history.length > 0) {
@@ -170,12 +145,16 @@ ${text.substring(0, 20000)}
         }
 
         const prompt = `
-You are a personal knowledge assistant (2nd brain).
-Answer the question using the provided context. If the answer is not in the context, say so gracefully.
+You are an intelligent personal knowledge assistant (2nd Brain).
+The user is asking a question about their saved content (they might call it their brain, vault, bookmarks, notes, or links).
+Answer the question based ONLY on the numbered sources below. These sources represent the most relevant content retrieved from their brain.
+Cite source numbers in your answer like [1], [2] when referencing specific information.
+If the sources do not contain enough information to answer the question, say "I don't have information about that in your saved content."
+Be concise, direct, and helpful.
 
-CRITICAL: You must respond in the same language as the user's question. For example, if the question is in English, write your entire response in English, even if the provided context is in Hindi or another language.
+CRITICAL: You must respond in the same language as the user's question.
 
-Context:
+Sources from user's brain:
 ${context}
 ${historyText}
 Question:
@@ -190,15 +169,55 @@ ${question}
     }
   }
 
-  chunkText(text: string, chunkSize = 500, overlap = 100): string[] {
-    const words = text.split(/\s+/);
-    const chunks: string[] = [];
-    let i = 0;
-    while (i < words.length) {
-      const chunk = words.slice(i, i + chunkSize).join(' ');
-      chunks.push(chunk);
-      i += chunkSize - overlap;
+  // ──────────────────────────────────────────────────────────────────────────
+  // Text Chunking — sentence-boundary-aware with overlap
+  // ──────────────────────────────────────────────────────────────────────────
+
+  chunkText(text: string, maxWords = 500, overlapWords = 100): string[] {
+    // Split into sentences — handles periods, exclamation marks, question marks, and newlines
+    const sentences = text.match(/[^.!?\n]+(?:[.!?]+["'\u201d\u2019)}\]]*|$)|\n+/g) || [text];
+    const cleanedSentences = sentences
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    if (cleanedSentences.length === 0) {
+      return [text.trim()].filter(t => t.length > 0);
     }
+
+    const chunks: string[] = [];
+    let currentChunk: string[] = [];
+    let currentWordCount = 0;
+
+    for (const sentence of cleanedSentences) {
+      const sentenceWordCount = sentence.split(/\s+/).length;
+
+      // If adding this sentence exceeds the limit and we have content, finalize the chunk
+      if (currentWordCount + sentenceWordCount > maxWords && currentChunk.length > 0) {
+        chunks.push(currentChunk.join(' '));
+
+        // Build overlap: keep trailing sentences that fit within overlapWords
+        const overlapChunk: string[] = [];
+        let overlapCount = 0;
+        for (let j = currentChunk.length - 1; j >= 0 && overlapCount < overlapWords; j--) {
+          overlapChunk.unshift(currentChunk[j]);
+          overlapCount += currentChunk[j].split(/\s+/).length;
+        }
+        currentChunk = overlapChunk;
+        currentWordCount = overlapCount;
+      }
+
+      currentChunk.push(sentence);
+      currentWordCount += sentenceWordCount;
+    }
+
+    // Don't forget the last chunk
+    if (currentChunk.length > 0) {
+      const lastChunk = currentChunk.join(' ').trim();
+      if (lastChunk.length > 0) {
+        chunks.push(lastChunk);
+      }
+    }
+
     return chunks;
   }
 }
