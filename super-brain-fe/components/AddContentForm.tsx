@@ -5,6 +5,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Plus, Link as LinkIcon, FileText, Image as ImageIcon, Upload, X, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -108,9 +116,9 @@ export function AddContentForm({ onAdd }: AddContentFormProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="title" className="block text-sm font-heading font-bold mb-2">
+                <Label htmlFor="title" className="mb-2 block">
                   Title
-                </label>
+                </Label>
                 <Input
                   id="title"
                   type="text"
@@ -122,34 +130,37 @@ export function AddContentForm({ onAdd }: AddContentFormProps) {
               </div>
 
               <div>
-                <label htmlFor="type" className="block text-sm font-heading font-bold mb-2">
+                <Label htmlFor="type" className="mb-2 block">
                   Type
-                </label>
-                <select
-                  id="type"
+                </Label>
+                <Select
                   value={type}
-                  onChange={(e) => {
-                      setType(e.target.value);
-                      setError(null);
-                      clearFile();
+                  onValueChange={(v) => {
+                    setType(v);
+                    setError(null);
+                    clearFile();
                   }}
                   disabled={isSubmitting}
-                  className="w-full h-10 rounded-[var(--radius-base)] border-4 border-border bg-background px-3 py-2 text-sm font-base font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-main"
                 >
-                  {types.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="type" className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {types.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             {type === 'note' ? (
               <div>
-                <label htmlFor="noteContent" className="block text-sm font-heading font-bold mb-2">
+                <Label htmlFor="noteContent" className="mb-2 block">
                   Note Content
-                </label>
+                </Label>
                 <Textarea
                   id="noteContent"
                   placeholder="Write your note here..."
@@ -163,9 +174,9 @@ export function AddContentForm({ onAdd }: AddContentFormProps) {
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4 items-end">
                     <div className="flex-1">
-                        <label htmlFor="link" className="block text-sm font-heading font-bold mb-2">
+                        <Label htmlFor="link" className="mb-2 block">
                         Link / URL
-                        </label>
+                        </Label>
                         <Input
                         id="link"
                         type="url"
@@ -181,9 +192,9 @@ export function AddContentForm({ onAdd }: AddContentFormProps) {
                     
                     {(type === 'pdf' || type === 'image') && (
                         <div className="flex-1">
-                            <label className="block text-sm font-heading font-bold mb-2">
+                            <Label className="mb-2 block">
                                 Or Upload File
-                            </label>
+                            </Label>
                             <div className="flex items-center gap-2">
                                 <Button
                                     type="button"

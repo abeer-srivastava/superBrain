@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Space_Grotesk, Archivo_Black } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
 import { Sidebar } from "@/components/Sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 import { Suspense } from "react";
 
-const inter = Inter({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-space-grotesk",
+});
+
+const archivoBlack = Archivo_Black({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-archivo-black",
 });
 
 export const metadata: Metadata = {
@@ -24,19 +30,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} antialiased`}>
-        <AuthProvider>
-          <div className="flex min-h-screen bg-background text-foreground">
-            <Suspense fallback={<div className="w-72 h-screen border-r-4 border-border bg-background hidden lg:block" />}>
-              <Sidebar />
-            </Suspense>
-            <div className="flex-1 flex flex-col">
-              <main className="flex-1 overflow-y-auto">
-                {children}
-              </main>
+      <body
+        className={`${spaceGrotesk.variable} ${archivoBlack.variable} antialiased bg-retro-grid-faint`}
+      >
+        <ThemeProvider>
+          <AuthProvider>
+            <div className="flex min-h-screen text-foreground">
+              <Suspense fallback={<div className="w-72 h-screen border-r-4 border-border bg-background hidden lg:block" />}>
+                <Sidebar />
+              </Suspense>
+              <div className="flex-1 flex flex-col">
+                <main className="flex-1 overflow-y-auto">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
-        </AuthProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
