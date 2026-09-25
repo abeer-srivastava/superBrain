@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QueueService = void 0;
 const common_1 = require("@nestjs/common");
@@ -37,6 +38,6 @@ exports.QueueService = QueueService;
 exports.QueueService = QueueService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, bullmq_1.InjectQueue)('extraction')),
-    __metadata("design:paramtypes", [bullmq_2.Queue])
+    __metadata("design:paramtypes", [typeof (_a = typeof bullmq_2.Queue !== "undefined" && bullmq_2.Queue) === "function" ? _a : Object])
 ], QueueService);
 //# sourceMappingURL=queue.service.js.map

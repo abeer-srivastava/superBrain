@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { Brain, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
@@ -44,13 +43,13 @@ export default function SigninPage() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="bg-chrome inline-flex items-center justify-center rounded-[var(--radius-base)] border-[3px] border-border p-4 text-foreground shadow-[var(--shadow)] mb-4">
-            <Brain className="w-12 h-12" />
+          <div className="inline-flex items-center justify-center p-4 bg-main rounded-[var(--radius-base)] border-4 border-border shadow-[var(--shadow)] mb-4">
+            <Brain className="w-12 h-12 text-main-foreground" />
           </div>
-          <h1 className="mb-2 font-display text-4xl uppercase tracking-tighter text-foreground">
+          <h1 className="text-4xl font-heading font-bold text-foreground mb-2">
             SuperBrain
           </h1>
-          <p className="font-base text-foreground/70">
+          <p className="text-foreground/70 font-base">
             Welcome back to your second brain
           </p>
         </div>
@@ -65,9 +64,9 @@ export default function SigninPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="username" className="mb-2 block">
+                <label htmlFor="username" className="block text-sm font-heading font-bold mb-2">
                   Username
-                </Label>
+                </label>
                 <Input
                   id="username"
                   type="text"
@@ -79,9 +78,9 @@ export default function SigninPage() {
               </div>
 
               <div>
-                <Label htmlFor="password" className="mb-2 block">
+                <label htmlFor="password" className="block text-sm font-heading font-bold mb-2">
                   Password
-                </Label>
+                </label>
                 <Input
                   id="password"
                   type="password"

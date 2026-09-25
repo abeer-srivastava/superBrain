@@ -6,10 +6,10 @@ export declare class AuthService {
     private jwtService;
     constructor(userService: UserService, jwtService: JwtService);
     signup(signupDto: SignupDto): Promise<{
-        token: string;
+        token: any;
     }>;
     signin(signinDto: SigninDto): Promise<{
-        token: string;
+        token: any;
     }>;
     private generateToken;
 }

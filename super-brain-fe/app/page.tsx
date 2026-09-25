@@ -3,19 +3,19 @@
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { RetroGrid } from "@/components/RetroGrid";
-import {
-  Brain,
-  Search,
-  Zap,
-  FileText,
-  MessageSquare,
-  Share2,
+import { 
+  Brain, 
+  Search, 
+  Zap, 
+  Globe, 
+  FileText, 
+  MessageSquare, 
+  Share2, 
   ArrowRight,
+  Plus,
   Shield,
   Monitor,
-  Check,
+  Check
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
@@ -34,266 +34,250 @@ export default function LandingPage() {
   const features = [
     {
       id: "01",
-      title: "Smart Ingestion",
+      title: "SMART INGESTION",
       desc: "Paste any link, upload a PDF, or drop an image. Our engine parses it instantly.",
       icon: Zap,
-      color: "bg-main text-main-foreground",
-      border: "border-border",
+      color: "bg-main"
     },
     {
       id: "02",
-      title: "Semantic Search",
+      title: "SEMANTIC SEARCH",
       desc: "Search by meaning, not keywords. Our AI understands the context of your data.",
       icon: Search,
-      color: "bg-accent-green text-black",
-      border: "border-border",
+      color: "bg-chart-4"
     },
     {
       id: "03",
-      title: "Easy Sharing",
+      title: "EASY SHARING",
       desc: "Toggle your brain to public and share your curated knowledge via link or QR.",
       icon: Share2,
-      color: "bg-accent-yellow text-black",
-      border: "border-border",
+      color: "bg-chart-1"
     },
     {
       id: "04",
       title: "PDF & OCR",
       desc: "Full text extraction from documents and images using local processing.",
       icon: FileText,
-      color: "bg-accent-orange text-white",
-      border: "border-border",
+      color: "bg-chart-3"
     },
     {
       id: "05",
-      title: "Privacy First",
+      title: "PRIVACY FIRST",
       desc: "Your data is yours. Isolated vector storage and secure authentication.",
       icon: Shield,
-      color: "bg-accent-cyan text-white",
-      border: "border-border",
+      color: "bg-chart-2"
     },
     {
       id: "06",
-      title: "Ask Your Brain",
+      title: "ASK YOUR BRAIN",
       desc: "Chat with your data. Get answers grounded only in the sources you've saved.",
       icon: MessageSquare,
-      color: "bg-accent-violet text-white",
-      border: "border-border",
-    },
+      color: "bg-main"
+    }
   ];
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background font-base text-foreground">
+    <div className="min-h-screen bg-white text-black font-base overflow-x-hidden">
       {/* Top Nav */}
-      <nav className="sticky top-0 z-[100] border-b-[3px] border-border bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4">
+      <nav className="border-b-4 border-black bg-secondary-background/50 backdrop-blur-sm sticky top-0 z-[100]">
+        <div className="max-w-7xl mx-auto px-4 h-20 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="bg-chrome flex items-center rounded-[var(--radius-base)] border-[3px] border-border p-2 text-foreground shadow-[var(--shadow)]">
-              <Brain className="h-6 w-6" />
+            <div className="p-2 bg-main rounded-[var(--radius-base)] border-4 border-black shadow-[4px_4px_0px_0px_#000]">
+              <Brain className="w-6 h-6 text-white" />
             </div>
-            <span className="font-display text-2xl uppercase tracking-tighter text-foreground">
-              SuperBrain
-            </span>
+            <span className="text-2xl font-heading font-bold uppercase tracking-tighter">SuperBrain</span>
           </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle compact />
+          <div className="flex items-center gap-4">
             <Link href="/auth/signin">
-              <Button variant="ghost">Login</Button>
+                <Button variant="ghost" className="font-heading font-bold uppercase">Login</Button>
             </Link>
             <Link href="/auth/signup">
-              <Button>Sign Up</Button>
+                <Button className="font-heading font-bold uppercase shadow-[4px_4px_0px_0px_#000]">Sign Up</Button>
             </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden border-b-[3px] border-border bg-background pb-32 pt-20">
-        <RetroGrid />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-4 lg:grid-cols-2">
-          <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-            <div className="inline-block border-[3px] border-border bg-accent-yellow px-4 py-2 font-display text-xs uppercase tracking-wide text-black shadow-[var(--shadow)]">
-              V1.0 is Live
+      <section className="relative pt-20 pb-32 border-b-4 border-black bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="space-y-8"
+          >
+            <div className="inline-block px-4 py-2 border-4 border-black bg-yellow-300 font-heading font-bold uppercase shadow-[4px_4px_0px_0px_#000]">
+                V1.0 is Live! 🚀
             </div>
-            <h1 className="font-display text-5xl uppercase leading-[0.9] tracking-tighter text-foreground sm:text-7xl md:text-8xl">
-              Dive into your{" "}
-              <span className="bg-main px-2 text-main-foreground">Second Brain</span>
+            <h1 className="text-7xl md:text-8xl font-heading font-bold leading-[0.9] tracking-tighter uppercase">
+              DIVE INTO YOUR <span className="text-main underline decoration-black underline-offset-4">SECOND BRAIN</span>
             </h1>
-            <p className="max-w-xl font-base text-lg font-semibold text-foreground/70">
-              SuperBrain - Where your digital life becomes searchable. Store links, parse
-              PDFs, and ask AI questions about your own data.
+            <p className="text-2xl font-base font-bold text-black/70 max-w-xl">
+              SuperBrain - Where your digital life becomes searchable. 
+              Store links, parse PDFs, and ask AI questions about your own data.
             </p>
-            <div className="flex flex-col gap-4 pt-4 sm:flex-row">
-              <Link href="/auth/signup">
-                <Button className="h-16 px-10 text-xl shadow-[var(--shadow-lg)] hover:shadow-[var(--shadow-xl)]">
-                  Build Your Brain <ArrowRight className="ml-2 h-6 w-6" />
-                </Button>
-              </Link>
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Link href="/auth/signup">
+                    <Button className="h-16 px-10 text-xl font-heading font-bold uppercase shadow-[8px_8px_0px_0px_#000] hover:translate-y-[-2px] hover:shadow-[10px_10px_0px_0px_#000] transition-all">
+                        Build Your Brain <ArrowRight className="ml-2 w-6 h-6" />
+                    </Button>
+                </Link>
             </div>
           </motion.div>
 
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, rotate: 5, scale: 0.9 }}
             animate={{ opacity: 1, rotate: 0, scale: 1 }}
             className="relative"
           >
-            <div className="rounded-[var(--radius-lg)] border-[3px] border-border bg-accent-cyan p-2 shadow-[var(--shadow-xl)]">
-              <div className="space-y-4 rounded-[var(--radius-base)] border-[3px] border-border bg-background p-6">
-                <div className="mb-4 flex items-center gap-2 border-b-[3px] border-border pb-2">
-                  <Search className="h-5 w-5" />
-                  <span className="font-display text-sm uppercase">Ask Your Brain</span>
+            <div className="border-4 border-black bg-pink-400 p-2 shadow-[12px_12px_0px_0px_#000] rounded-[var(--radius-base)]">
+                <div className="border-4 border-black bg-white p-6 rounded-[var(--radius-base)] space-y-4">
+                    <div className="flex items-center gap-2 border-b-4 border-black pb-2 mb-4">
+                        <Search className="w-5 h-5" />
+                        <span className="font-heading font-bold uppercase">Ask Your Brain</span>
+                    </div>
+                    <div className="p-4 bg-gray-100 border-4 border-black rounded-[var(--radius-base)] italic font-bold">
+                        "What were my notes on vector databases from that blog post?"
+                    </div>
+                    <div className="p-4 bg-main text-white border-4 border-black rounded-[var(--radius-base)] shadow-[4px_4px_0px_0px_#000]">
+                        <p className="font-bold">AI: Vector databases store data as high-dimensional points. According to the article you saved yesterday, they use Cosine Similarity for retrieval...</p>
+                    </div>
+                    <div className="flex justify-end">
+                        <div className="px-3 py-1 bg-yellow-300 border-2 border-black font-bold text-[10px] uppercase shadow-[2px_2px_0px_0px_#000]">
+                            Source: pincone.io/blog
+                        </div>
+                    </div>
                 </div>
-                <div className="rounded-[var(--radius-base)] border-[3px] border-border bg-chrome/40 p-4 font-base italic">
-                  &quot;What were my notes on vector databases from that blog post?&quot;
-                </div>
-                <div className="rounded-[var(--radius-base)] border-[3px] border-border bg-main p-4 text-main-foreground shadow-[var(--shadow)]">
-                  <p className="font-base font-bold">
-                    AI: Vector databases store data as high-dimensional points. According to
-                    the article you saved yesterday, they use Cosine Similarity for retrieval...
-                  </p>
-                </div>
-                <div className="flex justify-end">
-                  <div className="rounded-[var(--radius-base)] border-2 border-border bg-accent-yellow px-3 py-1 text-[10px] font-display uppercase text-black shadow-[var(--shadow-sm)]">
-                    Source: pincone.io/blog
-                  </div>
-                </div>
-              </div>
             </div>
-            <div className="absolute -right-4 -top-6 rotate-12 rounded-[var(--radius-base)] border-[3px] border-border bg-accent-cyan px-4 py-2 font-display text-sm uppercase tracking-wide text-white shadow-[var(--shadow)]">
-              AI Powered!
+            {/* Sticker Decor */}
+            <div className="absolute -top-6 -right-6 px-4 py-2 bg-blue-500 text-white border-4 border-black font-heading font-bold uppercase rotate-12 shadow-[4px_4px_0px_0px_#000]">
+                AI Powered!
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* How it Works Grid */}
-      <section className="border-b-[3px] border-border bg-background py-32">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mb-20 space-y-4 text-center">
-            <h2 className="font-display text-5xl uppercase tracking-tighter text-foreground">
-              How It Works
-            </h2>
-            <div className="mx-auto h-2 w-32 border-2 border-border bg-main"></div>
+      <section className="py-32 bg-gray-50 border-b-4 border-black">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-20 space-y-4">
+            <h2 className="text-5xl font-heading font-bold uppercase tracking-tighter">HOW IT WORKS</h2>
+            <div className="w-32 h-2 bg-main mx-auto border-2 border-black"></div>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((f) => {
-              const Icon = f.icon;
-              return (
-                <div
-                  key={f.id}
-                  className="group rounded-[var(--radius-lg)] border-[3px] border-border bg-secondary-background p-8 shadow-[var(--shadow)] transition-all hover:-translate-y-1 hover:shadow-[var(--shadow-lg)]"
-                >
-                  <div className="mb-6 flex items-start justify-between">
-                    <div
-                      className={`rounded-[var(--radius-base)] border-[3px] border-border p-4 shadow-[var(--shadow)] ${f.color}`}
-                    >
-                      <Icon className="h-8 w-8" />
+                const Icon = f.icon;
+                return (
+                    <div key={f.id} className="group border-4 border-black bg-white p-8 shadow-[8px_8px_0px_0px_#000] hover:translate-y-[-4px] hover:shadow-[12px_12px_0px_0px_#000] transition-all">
+                        <div className="flex justify-between items-start mb-6">
+                            <div className={`p-4 border-4 border-black rounded-[var(--radius-base)] ${f.color} text-white shadow-[4px_4px_0px_0px_#000]`}>
+                                <Icon className="w-8 h-8" />
+                            </div>
+                            <span className="text-4xl font-heading font-bold text-black/10">{f.id}</span>
+                        </div>
+                        <h3 className="text-2xl font-heading font-bold uppercase mb-4">{f.title}</h3>
+                        <p className="text-lg font-base font-bold text-black/60">{f.desc}</p>
                     </div>
-                    <span className="font-display text-4xl text-foreground/10">{f.id}</span>
-                  </div>
-                  <h3 className="mb-4 font-display text-2xl uppercase text-foreground">{f.title}</h3>
-                  <p className="font-base font-semibold text-foreground/60">{f.desc}</p>
-                </div>
-              );
+                );
             })}
           </div>
         </div>
       </section>
 
       {/* Knowledge Engine Section */}
-      <section className="border-b-[3px] border-border bg-background py-32">
-        <div className="mx-auto grid max-w-7xl items-center gap-20 px-4 lg:grid-cols-2">
+      <section className="py-32 bg-white border-b-4 border-black">
+        <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-20 items-center">
           <div className="space-y-8">
-            <h2 className="font-display text-5xl uppercase leading-none tracking-tighter text-foreground sm:text-6xl">
-              The Knowledge <br /> <span className="text-accent-pink">Engine</span>
+            <h2 className="text-6xl font-heading font-bold uppercase tracking-tighter leading-none">
+                THE KNOWLEDGE <br/> <span className="text-pink-500">ENGINE</span>
             </h2>
-            <p className="font-base text-lg font-semibold text-foreground/70">
-              Control exactly how your knowledge is processed. SuperBrain uses local embedding
-              models to ensure your data stays private while remaining searchable.
+            <p className="text-xl font-base font-bold text-black/70">
+                Control exactly how your knowledge is processed. SuperBrain uses local embedding models to ensure your data stays private while remaining searchable.
             </p>
             <div className="space-y-4">
-              {[
-                "Local Embedding Processing",
-                "Automated Link Scraping",
-                "Semantic Vector Retrieval",
-                "Grounded AI Responses",
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-4">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-base)] border-2 border-border bg-accent-green text-black shadow-[var(--shadow-sm)]">
-                    <Check className="h-4 w-4" />
-                  </div>
-                  <span className="font-display text-sm uppercase text-foreground">{item}</span>
-                </div>
-              ))}
+                {[
+                    "Local Embedding Processing",
+                    "Automated Link Scraping",
+                    "Semantic Vector Retrieval",
+                    "Grounded AI Responses"
+                ].map(item => (
+                    <div key={item} className="flex items-center gap-4">
+                        <div className="p-1 bg-green-400 border-2 border-black shadow-[2px_2px_0px_0px_#000]">
+                            <Check className="w-4 h-4" />
+                        </div>
+                        <span className="font-heading font-bold uppercase">{item}</span>
+                    </div>
+                ))}
             </div>
           </div>
 
           <div className="space-y-4">
-            {[
-              { label: "URL / File Arrives", color: "bg-background text-foreground" },
-              { label: "Auto Extraction & Chunking", color: "bg-accent-green text-black" },
-              { label: "Vector Embedding Stored", color: "bg-accent-cyan text-white" },
-              { label: "AI Answers Ready", color: "bg-main text-main-foreground" },
-            ].map((step, i) => (
-              <div key={step.label} className="space-y-4">
-                <div
-                  className={`rounded-[var(--radius-base)] border-[3px] border-border p-6 font-display uppercase tracking-wide shadow-[var(--shadow)] ${step.color}`}
-                >
-                  {i === 0 ? <Monitor className="mr-3 inline h-5 w-5" /> : null}
-                  {step.label}
-                </div>
-                {i < 3 && (
-                  <div className="flex justify-center py-1">
-                    <ArrowRight className="h-6 w-6 rotate-90 text-foreground/40" />
-                  </div>
-                )}
-              </div>
-            ))}
+            <div className="p-6 border-4 border-black bg-white shadow-[8px_8px_0px_0px_#000] font-heading font-bold uppercase">
+                📥 URL / FILE ARRIVES
+            </div>
+            <div className="flex justify-center py-2">
+                <ArrowRight className="w-8 h-8 rotate-90" />
+            </div>
+            <div className="p-6 border-4 border-black bg-green-400 shadow-[8px_8px_0px_0px_#000] font-heading font-bold uppercase">
+                ✨ AUTO EXTRACTION & CHUNKING
+            </div>
+            <div className="flex justify-center py-2">
+                <ArrowRight className="w-8 h-8 rotate-90" />
+            </div>
+            <div className="p-6 border-4 border-black bg-blue-400 shadow-[8px_8px_0px_0px_#000] font-heading font-bold uppercase text-white">
+                🧠 VECTOR EMBEDDING STORED
+            </div>
+            <div className="flex justify-center py-2">
+                <ArrowRight className="w-8 h-8 rotate-90" />
+            </div>
+            <div className="p-6 border-4 border-black bg-main shadow-[8px_8px_0px_0px_#000] font-heading font-bold uppercase text-white">
+                💬 AI ANSWERS READY
+            </div>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="border-b-[3px] border-border bg-accent-yellow py-32">
-        <div className="mx-auto max-w-5xl px-4 text-center">
-          <div className="rounded-[var(--radius-lg)] border-[3px] border-border bg-secondary-background p-12 text-foreground shadow-[var(--shadow-xl)]">
-            <h2 className="mb-6 font-display text-5xl uppercase tracking-tighter sm:text-6xl">
-              Ready to dive in?
-            </h2>
-            <p className="mb-10 font-base text-lg font-semibold text-foreground/70">
-              Join 5,000+ developers and researchers building their second brain.
-            </p>
-            <div className="flex flex-col justify-center gap-6 sm:flex-row">
-              <Link href="/auth/signup">
-                <Button className="h-16 px-12 text-xl shadow-[var(--shadow-lg)]">Claim Your Brain</Button>
-              </Link>
-            </div>
-          </div>
+      <section className="py-32 bg-yellow-300 border-b-4 border-black">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+            <Card className="p-12 border-4 border-black bg-white shadow-[16px_16px_0px_0px_#000]">
+                <h2 className="text-5xl md:text-6xl font-heading font-bold uppercase tracking-tighter mb-6">READY TO DIVE IN?</h2>
+                <p className="text-xl font-base font-bold text-black/70 mb-10">Join 5,000+ developers and researchers building their second brain.</p>
+                <div className="flex flex-col sm:flex-row justify-center gap-6">
+                    <Link href="/auth/signup">
+                        <Button className="h-16 px-12 text-xl font-heading font-bold uppercase shadow-[8px_8px_0px_0px_#000]">CLAIM YOUR BRAIN</Button>
+                    </Link>
+                </div>
+            </Card>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-foreground py-12 text-background">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 px-4 md:flex-row">
-          <div className="flex items-center gap-3">
-            <div className="bg-chrome flex items-center rounded-[var(--radius-base)] border-2 border-border p-2 text-foreground">
-              <Brain className="h-5 w-5" />
+      <footer className="bg-black text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-main rounded-[var(--radius-base)] border-2 border-white">
+                    <Brain className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-heading font-bold uppercase tracking-tighter">SuperBrain</span>
             </div>
-            <span className="font-display text-xl uppercase tracking-tighter text-foreground">
-              SuperBrain
-            </span>
-          </div>
-          <p className="font-base text-sm font-bold text-foreground/50">
-            © 2026 SuperBrain. All rights reserved.
-          </p>
-          <div className="flex gap-8 font-display text-sm uppercase">
-            <a href="#" className="text-foreground/70 hover:text-main">Twitter</a>
-            <a href="#" className="text-foreground/70 hover:text-main">Github</a>
-            <a href="#" className="text-foreground/70 hover:text-main">Terms</a>
-          </div>
+            <p className="font-base font-bold text-white/50 text-sm">© 2026 SuperBrain. All rights reserved.</p>
+            <div className="flex gap-8 font-heading font-bold uppercase text-sm">
+                <a href="#" className="hover:text-main">Twitter</a>
+                <a href="#" className="hover:text-main">Github</a>
+                <a href="#" className="hover:text-main">Terms</a>
+            </div>
         </div>
       </footer>
     </div>
   );
+}
+
+function Card({ children, className = "" }: { children: React.ReactNode, className?: string }) {
+    return (
+        <div className={`border-4 border-black rounded-[var(--radius-base)] ${className}`}>
+            {children}
+        </div>
+    );
 }

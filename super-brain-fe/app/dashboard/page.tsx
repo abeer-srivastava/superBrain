@@ -3,15 +3,13 @@
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AddContentForm } from "@/components/AddContentForm";
 import { ContentCard } from "@/components/ContentCard";
-import { SectionHeading } from "@/components/SectionHeading";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useContent } from "@/hooks/useContent";
 import { useShareBrain } from "@/hooks/useShareBrain";
-import { Share2, Copy, Check, Hash, Slack, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Share2, Copy, Check, Filter, Slack, Hash } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 function DashboardContent() {
@@ -20,6 +18,7 @@ function DashboardContent() {
   const [copied, setCopied] = useState(false);
   const searchParams = useSearchParams();
   const typeFilter = searchParams.get("type");
+
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const allTags = useMemo(() => {
@@ -32,12 +31,10 @@ function DashboardContent() {
     return Array.from(tagsSet).sort();
   }, [contents]);
 
-  // Adjust state during render: reset tag filter when the type filter changes
-  const [prevTypeFilter, setPrevTypeFilter] = useState(typeFilter);
-  if (prevTypeFilter !== typeFilter) {
-    setPrevTypeFilter(typeFilter);
+  // Reset tag selection when type filter changes
+  useEffect(() => {
     setSelectedTag(null);
-  }
+  }, [typeFilter]);
 
   const filteredContents = useMemo(() => {
     let result = contents;
@@ -60,47 +57,50 @@ function DashboardContent() {
 
   return (
     <div className="bg-background">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Header */}
-        <SectionHeading
-          title={typeFilter ? `${typeFilter}s` : "Your Brain"}
-          subtitle={
-            typeFilter
-              ? `Viewing all ${typeFilter} content in your second brain`
-              : "Manage and organize your personal knowledge collection"
-          }
-          icon={<Slack className="h-8 w-8" />}
-          accent="chrome"
-        />
-
-        {typeFilter && (
-          <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => (window.location.href = "/dashboard")}
-              className="gap-1.5"
-            >
-              <X className="h-4 w-4" /> Clear Filter
-            </Button>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-heading font-bold text-foreground mb-2 uppercase tracking-tighter flex items-center gap-2">
+              <div className="p-2 bg-main rounded-[var(--radius-base)] border-4 border-border shadow-[4px_4px_0px_0px_var(--border)] group-hover:translate-y-[-2px] group-hover:shadow-[6px_6px_0px_0px_var(--border)] transition-all">
+                <Slack className="w-8 h-8 text-main-foreground" />
+              </div>
+              {typeFilter ? `${typeFilter}s` : "Your Brain"}
+            </h1>
+            <p className="text-foreground/70 font-base">
+              {typeFilter 
+                ? `Viewing all ${typeFilter} content in your second brain` 
+                : "Manage and organize your personal knowledge collection"}
+            </p>
           </div>
-        )}
+          
+          <div className="flex items-center gap-2">
+              {typeFilter && (
+                  <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="font-bold underline"
+                      onClick={() => window.location.href = '/dashboard'}
+                  >
+                      Clear Filter
+                  </Button>
+              )}
+          </div>
+        </div>
 
         {/* Add Content Form */}
         <AddContentForm onAdd={addContent} />
 
         {/* Share Brain Section */}
-        <Card>
+        <Card className="border-4 border-border shadow-[var(--shadow)]">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-base)] border-[3px] border-border bg-accent-cyan text-white shadow-[var(--shadow-sm)]">
-                <Share2 className="h-4 w-4" />
-              </span>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="w-6 h-6" />
               Public Brain Link
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="font-base text-sm text-foreground/70">
+            <p className="text-sm text-foreground/70 font-base">
               {isShared
                 ? "Your brain is currently public. Anyone with the link can view your content."
                 : "Generate a public link to share your knowledge collection with others."}
@@ -111,9 +111,9 @@ function DashboardContent() {
                 onClick={toggleShare}
                 disabled={shareLoading}
                 variant={isShared ? "danger" : "default"}
-                className="gap-2"
+                className="gap-2 shadow-[4px_4px_0px_0px_var(--border)] active:translate-y-1"
               >
-                <Share2 className="h-4 w-4" />
+                <Share2 className="w-4 h-4" />
                 {shareLoading
                   ? "Processing..."
                   : isShared
@@ -122,15 +122,24 @@ function DashboardContent() {
               </Button>
 
               {isShared && shareLink && (
-                <div className="flex flex-1 items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
                   <input
                     type="text"
                     value={shareLink}
                     readOnly
-                    className="h-11 flex-1 rounded-[var(--radius-base)] border-[3px] border-border bg-background px-3 py-2 text-sm font-base font-semibold text-foreground shadow-[var(--shadow-sm)]"
+                    className="flex-1 h-10 rounded-[var(--radius-base)] border-4 border-border bg-background px-3 py-2 text-sm font-base font-semibold text-foreground"
                   />
-                  <Button onClick={handleCopyLink} variant="secondary" size="icon">
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <Button
+                    onClick={handleCopyLink}
+                    variant="secondary"
+                    size="icon"
+                    className="shadow-[2px_2px_0px_0px_var(--border)]"
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               )}
@@ -140,12 +149,10 @@ function DashboardContent() {
 
         {/* Tags Filter Cloud */}
         {allTags.length > 0 && (
-          <Card>
+          <Card className="border-4 border-border shadow-[var(--shadow)]">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <span className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-base)] border-2 border-border bg-accent-yellow text-black shadow-[var(--shadow-sm)]">
-                  <Hash className="h-4 w-4" />
-                </span>
+                <Hash className="w-5 h-5 text-main" />
                 Filter by Tag
               </CardTitle>
             </CardHeader>
@@ -153,7 +160,7 @@ function DashboardContent() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedTag(null)}
-                  className={`rounded-[var(--radius-base)] border-2 border-border px-3 py-1 font-display text-xs uppercase tracking-wide shadow-[var(--shadow-sm)] transition-all active:translate-y-[2px] active:shadow-none ${
+                  className={`px-3 py-1 rounded-[var(--radius-base)] border-2 border-border font-heading font-bold text-xs uppercase transition-all shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-[2px] active:shadow-none ${
                     selectedTag === null
                       ? "bg-main text-main-foreground"
                       : "bg-background text-foreground hover:bg-secondary-background"
@@ -165,7 +172,7 @@ function DashboardContent() {
                   <button
                     key={tag}
                     onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                    className={`rounded-[var(--radius-base)] border-2 border-border px-3 py-1 font-display text-xs uppercase tracking-wide shadow-[var(--shadow-sm)] transition-all active:translate-y-[2px] active:shadow-none ${
+                    className={`px-3 py-1 rounded-[var(--radius-base)] border-2 border-border font-heading font-bold text-xs uppercase transition-all shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-[2px] active:shadow-none ${
                       selectedTag === tag
                         ? "bg-main text-main-foreground"
                         : "bg-background text-foreground hover:bg-secondary-background"
@@ -181,23 +188,25 @@ function DashboardContent() {
 
         {/* Content List */}
         <div>
-          <h2 className="mb-6 flex items-center gap-2 font-display text-2xl uppercase tracking-tight text-foreground">
-            Filtered Content ({filteredContents.length})
-          </h2>
+          <div className="flex items-center gap-2 mb-6">
+              <Filter className="w-6 h-6 text-main" />
+              <h2 className="text-2xl font-heading font-bold text-foreground">
+              Filtered Content ({filteredContents.length})
+              </h2>
+          </div>
 
           {loading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-48 w-full" />
-              ))}
+            <div className="text-center py-12">
+              <div className="w-16 h-16 border-4 border-border border-t-main rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-foreground/70 font-base">Syncing with your brain...</p>
             </div>
           ) : filteredContents.length === 0 ? (
-            <Card className="border-dashed bg-secondary-background/40">
+            <Card className="border-4 border-dashed border-border/50 bg-secondary-background/30">
               <CardContent className="p-12 text-center">
-                <p className="font-base text-lg italic text-foreground/70">
-                  {typeFilter
-                    ? `No ${typeFilter}s found. Try adding some!`
-                    : "Your brain is empty. Start by adding some content above!"}
+                <p className="text-foreground/70 font-base text-lg italic">
+                  {typeFilter 
+                      ? `No ${typeFilter}s found. Try adding some!` 
+                      : "Your brain is empty. Start by adding some content above!"}
                 </p>
               </CardContent>
             </Card>
@@ -209,18 +218,21 @@ function DashboardContent() {
               transition={{ duration: 0.3 }}
             >
               <AnimatePresence mode="popLayout">
-                {filteredContents.map((content) => (
+                  {filteredContents.map((content, index) => (
                   <motion.div
-                    key={content._id || content.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.2 }}
+                      key={content._id || content.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
                   >
-                    <ContentCard content={content} onDelete={deleteContent} />
+                      <ContentCard
+                      content={content}
+                      onDelete={deleteContent}
+                      />
                   </motion.div>
-                ))}
+                  ))}
               </AnimatePresence>
             </motion.div>
           )}
@@ -234,8 +246,8 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <Suspense fallback={
-        <div className="flex min-h-screen items-center justify-center bg-background">
-          <div className="h-16 w-16 animate-spin rounded-full border-[3px] border-border border-t-main"></div>
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="w-16 h-16 border-4 border-border border-t-main rounded-full animate-spin"></div>
         </div>
       }>
         <DashboardContent />
