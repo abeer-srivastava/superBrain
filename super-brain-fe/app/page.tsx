@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 import { Logo } from "@/components/brand/logo";
 import { HeroField } from "@/components/brand/hero-field";
 import { ScrollRail } from "@/components/ui/scroll-rail";
+import { SmoothScroll } from "@/components/motion/smooth-scroll";
+import { PrintIn } from "@/components/motion/print-in";
+import { Words } from "@/components/motion/words";
 
 const SECTIONS = [
   { id: "top", label: "Start" },
@@ -16,9 +19,13 @@ function SectionHead({ claim, tail, label }: { claim: string; tail: string; labe
   return (
     <header className="border-t border-ink pt-5">
       <p className="eyebrow">— {label}</p>
-      <h2 className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-2">
-        <span className="claim text-[40px] leading-[1.05] text-ink sm:text-[56px]">{claim}</span>
-        <span className="claim-tail text-xl sm:text-2xl">{tail}</span>
+      <h2 data-reveal="words" className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-2">
+        <span className="claim text-[40px] leading-[1.05] text-ink sm:text-[56px]">
+          <Words text={claim} />
+        </span>
+        <span data-tail className="claim-tail text-xl sm:text-2xl">
+          {tail}
+        </span>
       </h2>
     </header>
   );
@@ -40,10 +47,10 @@ function ProductStill() {
     { kind: "PDF", site: "hamming-talk.pdf", title: "You and Your Research", when: "2021" },
   ];
   return (
-    <div className="grid gap-px border border-ink bg-ink lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]" aria-hidden>
+    <div data-reveal="print" className="grid gap-px border border-ink bg-ink lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]" aria-hidden>
       <div className="relative bg-paper-2 p-6 sm:p-8">
         <p className="eyebrow">Saved · 3 of 128</p>
-        <div className="relative mt-6 h-[300px]">
+        <div data-reveal="stagger" className="relative mt-6 h-[300px]">
           {sheets.map((s, i) => (
             <div key={s.title} className="absolute w-[86%] border border-ink bg-paper p-4" style={{ top: i * 74, left: i * 18, zIndex: i }}>
               <div className="flex items-center justify-between font-mono text-[10.5px] tracking-[0.04em] text-ink-3">
@@ -103,32 +110,32 @@ const PRIVACY: [string, boolean][] = [
 function Header({ signedIn }: { signedIn: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line-strong bg-paper/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between px-5 sm:px-10">
-        <Link href="/" aria-label="SuperBrain home">
-          <Logo />
-        </Link>
-        <nav className="flex items-center text-sm">
-          <a href="#how" className="wipe hidden px-3 py-2 text-ink sm:block">
-            How it works
+      <div className="mx-auto flex min-h-16 max-w-[1572px] items-center justify-between gap-4 px-5 py-2 sm:px-10">
+        <nav className="flex flex-wrap items-center gap-1 font-mono text-[11px] uppercase tracking-[0.04em] sm:gap-2">
+          <Link href="/" aria-label="SuperBrain home"><Logo /></Link>
+          <a href="#product" className="inline-flex h-8 items-center border border-line-strong transition-colors duration-300 ease-[var(--ease)] hover:border-ink">
+            <span className="bg-ink px-2 py-1 text-paper">/</span><span className="px-2">product</span>
           </a>
-          <a href="#trust" className="wipe hidden px-3 py-2 text-ink sm:block">
-            Privacy
+          <a href="#how" className="hidden h-8 items-center border border-line-strong transition-colors duration-300 ease-[var(--ease)] hover:border-ink sm:inline-flex">
+            <span className="bg-ink px-2 py-1 text-paper">/</span><span className="px-2">how it works</span>
           </a>
+          <a href="#trust" className="hidden h-8 items-center border border-line-strong transition-colors duration-300 ease-[var(--ease)] hover:border-ink sm:inline-flex">
+            <span className="bg-ink px-2 py-1 text-paper">/</span><span className="px-2">privacy</span>
+          </a>
+        </nav>
+        <div className="flex shrink-0 items-center gap-4">
+          <nav className="hidden items-center gap-2 font-mono text-[11px] uppercase sm:flex">
           {signedIn ? (
-            <Link href="/library" className="btn-slab ml-3 flex h-10 items-center px-5 font-semibold">
-              Open library
-            </Link>
+            <Link href="/library" className="border border-line-strong px-3 py-2 transition-colors hover:border-ink">/ library</Link>
           ) : (
             <>
-              <Link href="/signin" className="wipe px-3 py-2 text-ink">
-                Sign in
-              </Link>
-              <Link href="/signup" className="btn-slab ml-3 flex h-10 items-center px-5 font-semibold">
-                Get started
-              </Link>
+              <Link href="/signin" className="border border-line-strong px-3 py-2 transition-colors hover:border-ink">/ sign in</Link>
+              <Link href="/signup" className="border border-ink bg-ink px-3 py-2 text-paper transition-colors hover:bg-paper hover:text-ink">/ get started</Link>
             </>
           )}
         </nav>
+          
+        </div>
       </div>
     </header>
   );
@@ -139,34 +146,46 @@ export default async function Landing() {
 
   return (
     <div className="min-h-dvh overflow-x-clip">
-      <Header signedIn={signedIn} />
+      <SmoothScroll />
+      <PrintIn />
       <ScrollRail sections={SECTIONS} />
+      <div className="tide-sheet">
+      <Header signedIn={signedIn} />
 
-      <main className="mx-auto max-w-[1240px] px-5 sm:px-10">
-        <section id="top" className="scroll-mt-20 pb-24 pt-16 sm:pt-28">
-          <p className="eyebrow animate-fade-up">— A commonplace book with perfect recall</p>
-          <h1 className="mt-6 max-w-[15ch] text-[52px] font-bold leading-[0.98] tracking-[-0.045em] text-ink animate-fade-up sm:text-[88px] lg:text-[104px]">
-            Remember <span className="text-accent">everything</span> you read.
-          </h1>
-          <div className="mt-10 grid gap-10 border-t border-ink pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,560px)] lg:items-start">
-            <p className="max-w-[46ch] text-lg leading-relaxed text-ink-2">
-              Save links, PDFs, notes and screenshots. SuperBrain reads them, connects them, and answers your questions with citations from your own library.
+      <main className="mx-auto max-w-[1572px] px-5 sm:px-10">
+        <section id="top" className="scroll-mt-20 pb-24 pt-16 sm:pt-24">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
+            <div>
+              <p className="eyebrow animate-fade-up"><span className="bg-ink px-2 py-1 text-paper">A private knowledge system</span> that remembers what you read</p>
+              <h1 className="mt-8 max-w-[15ch] text-[54px] font-bold leading-[0.94] tracking-[-0.055em] text-ink animate-fade-up sm:text-[88px] lg:text-[clamp(88px,8vw,140px)]">
+                <span className="mark">Remember</span> what you <span className="font-mono text-[0.54em] font-normal tracking-[-0.04em]">read.</span>
+              </h1>
+            </div>
+            <p className="max-w-[32ch] pb-2 text-[16px] leading-relaxed text-ink-2 lg:justify-self-end">
+              Save links, PDFs, notes and screenshots. Find them later with answers cited to your own library.
             </p>
+          </div>
+          <div className="mt-16 border-y border-ink py-5">
             <HeroField signedIn={signedIn} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-8 gap-y-2 font-mono text-[11px] uppercase tracking-[0.06em] text-ink-3">
+            <span>Private by default</span>
+            <span>Search by meaning</span>
+            <span>Every answer cited</span>
           </div>
         </section>
       </main>
 
       <div className="border-y border-ink">
-        <div className="mx-auto flex max-w-[1240px] flex-wrap justify-between gap-x-8 gap-y-2 px-5 py-3 font-mono text-xs uppercase tracking-[0.06em] text-ink sm:px-10">
-          <span>Private by default</span>
-          <span>Cited, never invented</span>
-          <span>Search by meaning and words</span>
+        <div data-reveal="print" className="mx-auto flex max-w-[1572px] flex-wrap justify-between gap-x-8 gap-y-2 px-5 py-3 font-mono text-xs uppercase tracking-[0.06em] text-ink sm:px-10">
+          <span>Links · PDFs · Notes · Images</span>
+          <span>Answers with citations</span>
+          <span>Search by meaning</span>
           <span>Export anytime</span>
         </div>
       </div>
 
-      <main className="mx-auto max-w-[1240px] px-5 sm:px-10">
+      <main className="mx-auto max-w-[1572px] px-5 sm:px-10">
         <section id="product" className="scroll-mt-20 py-24 sm:py-32">
           <SectionHead label="What you get" claim="Answers you can check." tail="Every sentence points back to something you saved." />
           <div className="mt-12">
@@ -176,7 +195,7 @@ export default async function Landing() {
 
         <section id="how" className="scroll-mt-20 pb-24 sm:pb-32">
           <SectionHead label="How it works" claim="Four verbs." tail="Capture, connect, recall, resurface." />
-          <div className="mt-12 grid gap-px border border-ink bg-ink sm:grid-cols-2 lg:grid-cols-4">
+          <div data-reveal="print" className="mt-12 grid gap-px border border-ink bg-ink sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s, i) => (
               <article key={s.title} className="flex flex-col bg-paper p-6 transition-colors duration-300 hover:bg-paper-2">
                 <p className="flex justify-between font-mono text-[11px] uppercase tracking-[0.06em] text-ink-3">
@@ -196,7 +215,7 @@ export default async function Landing() {
         <section id="trust" className="scroll-mt-20 pb-24 sm:pb-32">
           <SectionHead label="Privacy" claim="Built to be trusted." tail="Here is exactly who can see what." />
           <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <table className="w-full border-collapse text-left">
+            <table data-reveal="rise" className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-ink font-mono text-[11px] uppercase tracking-[0.06em] text-ink-3">
                   <th className="py-3 pr-4 font-normal">What you save</th>
@@ -214,7 +233,7 @@ export default async function Landing() {
                 ))}
               </tbody>
             </table>
-            <div className="space-y-6 text-[15px] leading-relaxed text-ink-2">
+            <div data-reveal="stagger" className="space-y-6 text-[15px] leading-relaxed text-ink-2">
               <p>
                 <span className="font-semibold text-ink">Indexing stays in-house.</span> Search runs on a local embedding model, so your library isn’t shipped to a third party to be indexed. AI features only see the few excerpts needed to answer you.
               </p>
@@ -226,9 +245,10 @@ export default async function Landing() {
           </div>
         </section>
       </main>
+      </div>
 
-      <footer id="start" className="band-invert flex min-h-[92svh] flex-col">
-        <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col justify-center px-5 py-24 sm:px-10">
+      <footer id="start" data-map-end className="tide-band band-invert flex min-h-[92svh] flex-col">
+        <div className="mx-auto flex w-full max-w-[1572px] flex-1 flex-col justify-center px-5 py-24 sm:px-10">
           <p className="eyebrow">— Begin</p>
           <h2 className="mt-6 max-w-[14ch] text-[52px] font-bold leading-[0.98] tracking-[-0.045em] sm:text-[88px]">
             Start with <span className="text-accent">one link</span>.
@@ -238,7 +258,7 @@ export default async function Landing() {
             <HeroField signedIn={signedIn} inverted />
           </div>
         </div>
-        <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-4 border-t border-line px-5 py-6 font-mono text-xs uppercase tracking-[0.06em] text-ink-3 sm:px-10">
+        <div className="mx-auto flex w-full max-w-[1572px] flex-wrap items-center justify-between gap-4 border-t border-line px-5 py-6 font-mono text-xs uppercase tracking-[0.06em] text-ink-3 sm:px-10">
           <span>© {new Date().getFullYear()} SuperBrain</span>
           <nav className="flex gap-1">
             <Link href="/signin" className="wipe px-2 py-1 text-ink-2">

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { SmoothScroll } from "@/components/motion/smooth-scroll";
+import { PrintIn } from "@/components/motion/print-in";
 import type { PublicBrain } from "@/lib/types";
 
 const BACKEND = (process.env.BACKEND_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -50,6 +52,9 @@ export default async function SharedPage({ params }: { params: Promise<{ hash: s
 
   return (
     <div className="min-h-dvh">
+      <SmoothScroll />
+      <PrintIn />
+      <div className="tide-sheet">
       <header className="sticky top-0 z-30 border-b border-line-strong bg-paper/95 backdrop-blur-sm"><div className="mx-auto flex h-16 max-w-[900px] items-center justify-between px-5 sm:px-8">
         <Link href="/" aria-label="SuperBrain">
           <Logo />
@@ -83,7 +88,7 @@ export default async function SharedPage({ params }: { params: Promise<{ hash: s
           [...groups.entries()].map(([month, items]) => (
             <section key={month} className="mt-14">
               <h2 className="eyebrow sticky top-16 z-10 border-b border-ink bg-paper py-2 text-ink">{month}</h2>
-              <ul className="divide-y divide-line border-b border-line">
+              <ul data-reveal="stagger" className="divide-y divide-line border-b border-line">
                 {items.map((item) => (
                   <li key={item.id}>
                     <a href={item.originalLink} target="_blank" rel="noopener noreferrer nofollow" className="group flex gap-5 py-6">
@@ -108,8 +113,9 @@ export default async function SharedPage({ params }: { params: Promise<{ hash: s
           ))
         )}
       </main>
+      </div>
 
-      <footer className="band-invert">
+      <footer className="tide-band band-invert">
         <div className="mx-auto flex min-h-[60svh] max-w-[900px] flex-col justify-center px-5 py-20 sm:px-8">
           <p className="eyebrow">— Curated with SuperBrain</p>
           <p className="mt-5 text-[44px] font-bold leading-[1] tracking-[-0.045em] sm:text-[64px]">

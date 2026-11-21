@@ -22,16 +22,18 @@ export function HeroField({ signedIn, inverted }: { signedIn: boolean; inverted?
       setInvalid(true);
       return;
     }
-    const target = v ? `/library?save=${encodeURIComponent(v)}` : "/library";
+    const link = v && !/^https?:\/\//i.test(v) ? `https://${v}` : v;
+    const target = link ? `/library?save=${encodeURIComponent(link)}` : "/library";
     router.push(signedIn ? target : `/signup?next=${encodeURIComponent(target)}`);
   };
 
   return (
-    <form onSubmit={submit} className="w-full max-w-[560px]">
-      <div className={cn("flex h-14 border border-ink bg-paper", invalid && "border-accent")}>
+    <form onSubmit={submit} className="w-full">
+      <div className={cn("flex min-h-14 flex-col gap-1 sm:flex-row sm:items-stretch", invalid && "outline outline-1 outline-accent")}>
         <label htmlFor={inverted ? "hero-url-2" : "hero-url"} className="sr-only">
           A link you want to remember
         </label>
+        {!/^https?:\/\//i.test(value) && <span className="flex h-12 shrink-0 items-center bg-ink px-3 font-mono text-sm text-paper sm:h-auto sm:px-4">https://</span>}
         <input
           id={inverted ? "hero-url-2" : "hero-url"}
           inputMode="url"
@@ -41,10 +43,10 @@ export function HeroField({ signedIn, inverted }: { signedIn: boolean; inverted?
             setValue(e.target.value);
             setInvalid(false);
           }}
-          placeholder="https://an-article-worth-keeping.com"
-          className="min-w-0 flex-1 bg-transparent px-4 text-[16px] text-ink outline-none placeholder:text-ink-3"
+          placeholder="your-article.com"
+          className="min-h-12 min-w-0 flex-1 border-b border-line-strong bg-transparent px-3 text-[16px] text-ink outline-none placeholder:text-ink-3 focus:border-ink sm:min-h-0"
         />
-        <button type="submit" className="btn-slab m-[-1px] shrink-0 px-6 text-[15px] font-semibold">
+        <button type="submit" className="btn-slab mt-3 flex h-12 shrink-0 items-center justify-center px-6 text-[15px] font-semibold sm:mt-0">
           {signedIn ? "Save it" : "Start remembering"}
         </button>
       </div>

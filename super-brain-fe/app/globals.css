@@ -38,11 +38,11 @@
   --shadow-sm: none;
   --shadow-md: none;
   --shadow-lg: 0 24px 48px -28px rgb(17 17 16 / 0.35);
-  --ease: cubic-bezier(0.35, 0, 0.15, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
   color-scheme: light;
 }
 
-[data-theme="dark"], .band-invert {
+[data-theme="dark"], .band-invert, .scroll-map[data-inverted] {
   --paper: #111110;
   --paper-2: #1a1a19;
   --card: #151514;
@@ -186,7 +186,7 @@
     margin-left: 14px;
     background: var(--slab);
     color: var(--paper);
-    transition: background-color 0.2s var(--ease), opacity 0.15s;
+    transition: background-color 0.32s var(--ease), opacity 0.2s var(--ease);
   }
   .btn-slab::before {
     content: "";
@@ -208,7 +208,7 @@
     background-repeat: no-repeat;
     background-position: left center;
     background-size: 0% 100%;
-    transition: background-size 0.35s var(--ease), color 0.2s var(--ease);
+    transition: background-size 0.45s var(--ease), color 0.3s var(--ease);
   }
   /* Keep foreground contrast in sync with the ink wipe. The important
      declarations beat utility text-color classes on the same element and its
@@ -288,6 +288,64 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Scrolling ──────────────────────────────────────────────────────────── */
+
+/* Lenis (smooth wheel scrolling) base rules. */
+html.lenis, html.lenis body { height: auto; }
+.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+.lenis [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
+
+/* The section map replaces the native scrollbar while it's mounted. */
+html[data-scroll-map] { scrollbar-width: none; }
+html[data-scroll-map]::-webkit-scrollbar { display: none; }
+
+/* Section plate: visible only while scrolling, re-prints on section change. */
+.scroll-plate-rider { opacity: 0; transition: opacity 0.32s var(--ease) 0.1s; }
+.scroll-map[data-scrolling] .scroll-plate-rider { opacity: 1; transition-delay: 0s; }
+.scroll-map:hover .scroll-plate-rider { opacity: 0; }
+.scroll-plate { animation: plate-print 0.42s var(--ease) both; }
+@keyframes plate-print {
+  from { clip-path: inset(0 0 0 100%); }
+  to { clip-path: inset(0); }
+}
+
+/* Print-in reveals (armed by <PrintIn/> only for content below the fold). */
+[data-reveal="print"][data-state="armed"],
+[data-reveal="stagger"][data-state="armed"] > * { clip-path: inset(0 100% 0 0); }
+[data-reveal="print"][data-state="shown"],
+[data-reveal="stagger"][data-state="shown"] > * {
+  clip-path: inset(0 -1px 0 0);
+  transition: clip-path 0.78s var(--ease);
+}
+[data-reveal="stagger"][data-state="shown"] > * { transition-delay: calc(var(--i, 0) * 90ms); }
+
+[data-reveal="rise"][data-state="armed"] { opacity: 0; transform: translateY(10px); }
+[data-reveal="rise"][data-state="shown"] {
+  transition: opacity 0.55s var(--ease), transform 0.65s var(--ease);
+}
+
+[data-reveal="words"] .rw { display: inline-block; white-space: pre; }
+[data-reveal="words"][data-state="armed"] .rw { opacity: 0; transform: translateY(0.25em); }
+[data-reveal="words"][data-state="shown"] .rw {
+  transition: opacity 0.42s var(--ease), transform 0.55s var(--ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+/* A tail line beside a claim follows once the words have landed. */
+[data-reveal="words"][data-state="armed"] [data-tail] { opacity: 0; }
+[data-reveal="words"][data-state="shown"] [data-tail] { transition: opacity 0.55s var(--ease) 0.35s; }
+
+/* Footer tide: the page lifts off an inverted band parked underneath it.
+   Desktop only, where the band is guaranteed to fit the viewport. */
+@media (min-width: 1024px) {
+  .tide-sheet { position: relative; z-index: 1; background-color: var(--paper); background-image: radial-gradient(var(--dot) 0.55px, transparent 0.7px); background-size: 5px 5px; box-shadow: 0 1px 0 var(--ink); }
+  .tide-band { position: sticky; bottom: 0; z-index: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal][data-state], [data-reveal][data-state] * { opacity: 1 !important; transform: none !important; clip-path: none !important; }
 }
 
 /* Selected command-palette rows invert; keep highlighted matches legible. */
