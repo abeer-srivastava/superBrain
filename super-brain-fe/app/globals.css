@@ -18,6 +18,7 @@
   --ink-3: #656561;
   --line: #11111026;
   --line-strong: #11111059;
+  --dot: #1111102b;
   --accent: #9c1c1c;
   --accent-hover: #7d1414;
   --accent-soft: #f5e7e5;
@@ -50,6 +51,7 @@
   --ink-3: #f4f4f28c;
   --line: #f4f4f22e;
   --line-strong: #ffffff59;
+  --dot: #f4f4f22b;
   --accent: #e8746c;
   --accent-hover: #f08d86;
   --accent-soft: #2b1614;
@@ -135,6 +137,8 @@
   }
   body {
     background: var(--paper);
+    background-image: radial-gradient(var(--dot) 0.55px, transparent 0.7px);
+    background-size: 5px 5px;
     color: var(--ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -178,11 +182,23 @@
      sweeps across the slab. */
   .btn-slab {
     --slab: var(--ink);
-    background: linear-gradient(to right, var(--slab) 0 var(--cut), transparent var(--cut) calc(var(--cut) + 3px), var(--slab) calc(var(--cut) + 3px) 100%);
+    position: relative;
+    margin-left: 14px;
+    background: var(--slab);
     color: var(--paper);
-    transition: --cut 0.45s var(--ease), opacity 0.15s;
+    transition: background-color 0.2s var(--ease), opacity 0.15s;
   }
-  .btn-slab:hover:not(:disabled) { --cut: 8px; }
+  .btn-slab::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: calc(100% + 4px);
+    width: 10px;
+    height: 100%;
+    background: var(--slab);
+    pointer-events: none;
+  }
+  .btn-slab:hover:not(:disabled) { background: color-mix(in srgb, var(--slab) 86%, var(--paper)); }
   .btn-slab-danger { --slab: var(--danger); color: #fff; }
 
   /* ── Signature: wipe fill ───────────────────────────────────────────────
