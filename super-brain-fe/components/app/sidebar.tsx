@@ -89,7 +89,7 @@ export function Sidebar({ user }: { user: User }) {
                 key={k}
                 href={`/library?type=${k}`}
                 active={onLibrary && type === k}
-                icon={<span className="flex size-4 items-center justify-center"><KindDot kind={k} className="size-2" /></span>}
+                icon={<span className="flex size-4 items-center justify-center z-1"><KindDot kind={k} className="size-2 z-1" /></span>}
                 count={stats?.byType[k]}
               >
                 {KIND_PLURAL[k]}

@@ -194,8 +194,11 @@
     background-size: 0% 100%;
     transition: background-size 0.35s var(--ease), color 0.2s var(--ease);
   }
-  .wipe:hover, .wipe[data-active="true"] { background-size: 100% 100%; color: var(--paper); }
-  .wipe:hover *, .wipe[data-active="true"] * { color: inherit; }
+  /* Keep foreground contrast in sync with the ink wipe. The important
+     declarations beat utility text-color classes on the same element and its
+     children, which otherwise leave light text over the light hover fill. */
+  .wipe:hover, .wipe[data-active="true"] { background-size: 100% 100%; color: var(--paper) !important; }
+  .wipe:hover *, .wipe[data-active="true"] * { color: inherit !important; }
 
   /* 1-bit dot texture for quiet decorative surfaces. */
   .dither {
