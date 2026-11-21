@@ -112,7 +112,7 @@ function Header({ signedIn }: { signedIn: boolean }) {
     <header className="sticky top-0 z-40 border-b border-line-strong bg-paper/95 backdrop-blur-sm">
       <div className="mx-auto flex min-h-16 max-w-[1572px] items-center justify-between gap-4 px-5 py-2 sm:px-10">
         <nav className="flex flex-wrap items-center gap-1 font-mono text-[11px] uppercase tracking-[0.04em] sm:gap-2">
-          <Link href="/" aria-label="SuperBrain home"><Logo /></Link>
+          <Link href="/" aria-label="SuperBrain home" className="mr-2"><Logo /></Link>
           <a href="#product" className="inline-flex h-8 items-center border border-line-strong transition-colors duration-300 ease-[var(--ease)] hover:border-ink">
             <span className="bg-ink px-2 py-1 text-paper">/</span><span className="px-2">product</span>
           </a>
@@ -125,16 +125,15 @@ function Header({ signedIn }: { signedIn: boolean }) {
         </nav>
         <div className="flex shrink-0 items-center gap-4">
           <nav className="hidden items-center gap-2 font-mono text-[11px] uppercase sm:flex">
-          {signedIn ? (
-            <Link href="/library" className="border border-line-strong px-3 py-2 transition-colors hover:border-ink">/ library</Link>
-          ) : (
-            <>
-              <Link href="/signin" className="border border-line-strong px-3 py-2 transition-colors hover:border-ink">/ sign in</Link>
-              <Link href="/signup" className="border border-ink bg-ink px-3 py-2 text-paper transition-colors hover:bg-paper hover:text-ink">/ get started</Link>
-            </>
-          )}
-        </nav>
-          
+            {signedIn ? (
+              <Link href="/library" className="border border-line-strong px-3 py-2 transition-colors duration-300 ease-[var(--ease)] hover:border-ink">/ library</Link>
+            ) : (
+              <>
+                <Link href="/signin" className="border border-line-strong px-3 py-2 transition-colors duration-300 ease-[var(--ease)] hover:border-ink">/ sign in</Link>
+                <Link href="/signup" className="border border-ink bg-ink px-3 py-2 text-paper transition-colors duration-300 ease-[var(--ease)] hover:bg-paper hover:text-ink">/ get started</Link>
+              </>
+            )}
+          </nav>
         </div>
       </div>
     </header>
