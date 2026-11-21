@@ -154,7 +154,7 @@ export function LibraryView() {
         </FilterPill>
         {KINDS.map((k) => (
           <FilterPill key={k} href={`/library?type=${k}`} active={type === k && !tag && !favorite}>
-            <KindDot kind={k} /> {KIND_PLURAL[k]}
+            <KindDot kind={k} className="!bg-kind-pdf" /> {KIND_PLURAL[k]}
             {stats?.byType[k] ? <span className="font-mono text-[11px] opacity-60">{stats.byType[k]}</span> : null}
           </FilterPill>
         ))}

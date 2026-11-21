@@ -45,7 +45,7 @@ export function KindIcon({ kind, className }: { kind: ContentKind; className?: s
 }
 
 export function KindDot({ kind, className }: { kind: ContentKind; className?: string }) {
-  return <span className={cn("inline-block size-1.5", KIND_BG[kind], className)} aria-hidden />;
+  return <span className={cn("inline-block size-2", KIND_BG[kind], className)} aria-hidden />;
 }
 
 export function EmptyState({ icon, title, children, action }: { icon?: React.ReactNode; title: string; children?: React.ReactNode; action?: React.ReactNode }) {
