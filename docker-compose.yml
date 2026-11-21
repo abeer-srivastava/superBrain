@@ -1,31 +1,107 @@
 version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SuperBrain — Full Stack Docker Compose
+#
+# Services:
+#   - mongodb  : Primary database (users, content metadata)
+#   - qdrant   : Vector database (embeddings for semantic search)
+#   - redis    : BullMQ queue (async content processing)
+#   - backend  : NestJS API (port 3000)
+#   - frontend : Next.js UI (port 4000)
+#
+# Usage (infrastructure only — for local dev):
+#   docker compose up mongodb qdrant redis
+#
+# Usage (full stack):
+#   docker compose up --build
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
+  # ─── Infrastructure ──────────────────────────────────────────────────────────
+
   mongodb:
     image: mongo:latest
-    container_name: secondbrain_mongo
+    container_name: superbrain_mongo
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: secondbrain_qdrant
+    container_name: superbrain_qdrant
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:alpine
-    container_name: secondbrain_redis
+    image: redis:7-alpine
+    container_name: superbrain_redis
     ports:
       - "6379:6379"
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Application ─────────────────────────────────────────────────────────────
+
+  backend:
+    build:
+      context: ./super-brain-be
+      dockerfile: Dockerfile
+    container_name: superbrain_backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./super-brain-be/.env
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/superbrain
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./super-brain-fe
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
+    container_name: superbrain_frontend
+    ports:
+      - "4000:4000"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   mongo_data:
   qdrant_data:
+  backend_uploads:

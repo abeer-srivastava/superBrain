@@ -15,19 +15,25 @@ let EmbeddingService = EmbeddingService_1 = class EmbeddingService {
     modelName = 'Xenova/all-MiniLM-L6-v2';
     dimensions = 384;
     modelReady = false;
-    async onModuleInit() {
-        let retries = 5;
-        let delayMs = 5000;
+    initPromise = null;
+    onModuleInit() {
+        this.initPromise = this.loadModel();
+    }
+    async loadModel() {
+        let retries = 3;
+        let delayMs = 3000;
         while (retries > 0) {
             try {
                 this.logger.log(`Loading local embedding model: ${this.modelName} (Attempts left: ${retries})...`);
                 const { pipeline, env } = await import('@huggingface/transformers');
-                env.remoteHost = 'https://hf-mirror.com';
+                if (process.env.HF_ENDPOINT) {
+                    env.remoteHost = process.env.HF_ENDPOINT;
+                }
                 this.extractor = await pipeline('feature-extraction', this.modelName, {
                     dtype: 'fp32',
                 });
                 this.modelReady = true;
-                this.logger.log(`Local embedding model loaded: ${this.modelName} (${this.dimensions}d) — no API calls needed`);
+                this.logger.log(`Local embedding model loaded: ${this.modelName} (${this.dimensions}d) — ready for vector search`);
                 return;
             }
             catch (error) {
@@ -35,17 +41,26 @@ let EmbeddingService = EmbeddingService_1 = class EmbeddingService {
                 this.logger.warn(`Failed to load embedding model: ${error.message}. Retrying in ${delayMs / 1000}s...`);
                 if (retries === 0) {
                     this.logger.error('Failed to load local embedding model after multiple attempts', error);
-                    throw error;
+                    return;
                 }
                 await new Promise((resolve) => setTimeout(resolve, delayMs));
                 delayMs *= 2;
             }
         }
     }
-    async embedOne(text) {
-        if (!this.modelReady) {
-            throw new Error('Embedding model not loaded yet');
+    async ensureReady(timeoutMs = 60000) {
+        if (this.modelReady && this.extractor)
+            return;
+        if (this.initPromise) {
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Embedding model loading timed out')), timeoutMs));
+            await Promise.race([this.initPromise, timeout]);
         }
+        if (!this.modelReady) {
+            throw new Error('Embedding model not ready yet');
+        }
+    }
+    async embedOne(text) {
+        await this.ensureReady();
         const truncated = text.substring(0, 8000);
         const output = await this.extractor(truncated, {
             pooling: 'mean',
@@ -54,9 +69,7 @@ let EmbeddingService = EmbeddingService_1 = class EmbeddingService {
         return Array.from(output.data);
     }
     async embedMany(texts) {
-        if (!this.modelReady) {
-            throw new Error('Embedding model not loaded yet');
-        }
+        await this.ensureReady();
         const BATCH_SIZE = 32;
         const allEmbeddings = [];
         for (let i = 0; i < texts.length; i += BATCH_SIZE) {

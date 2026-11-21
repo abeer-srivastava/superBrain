@@ -3,9 +3,9 @@ export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
     signup(body: any): Promise<{
-        token: any;
+        token: string;
     }>;
     signin(body: any): Promise<{
-        token: any;
+        token: string;
     }>;
 }

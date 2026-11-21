@@ -1,117 +1,134 @@
-# 🧠 SuperBrain: Your AI-Powered Personal Knowledge Vault
+# 🧠 SuperBrain
 
-SuperBrain is a production-grade, AI-native "Second Brain" application designed to help you capture, organize, and query everything you consume online. It automatically extracts content from links (YouTube, Twitter, Blogs), PDFs, and images, stores them in a vector database, and allows you to ask questions over your data using RAG (Retrieval-Augmented Generation).
-
----
-
-## 🚀 Key Features
-
-- **Multi-Source Ingestion**: Support for YouTube transcripts, Twitter threads, Web articles, PDFs, and Images (OCR).
-- **AI-Powered Extraction**: Automatic text extraction and cleaning using Cheerio, PDF-parse, and Tesseract.
-- **Semantic Search**: Natural language search powered by vector embeddings (`all-MiniLM-L6-v2`).
-- **"Ask Your Brain"**: A RAG-based chat interface using **Google Gemini** to answer questions grounded in your saved content.
-- **Public Sharing**: Share specific curated "brains" or folders via unique public links.
-- **Asynchronous Processing**: High-performance background job processing using **BullMQ** and **Redis**.
-- **100% Free Stack**: Architected to run entirely on free-tier services (MongoDB Atlas, Upstash Redis, Qdrant Cloud, Gemini Free API).
+An AI-powered personal knowledge vault. Save links, PDFs, images, and notes — the system extracts text, generates embeddings, stores them in a vector database, and lets you ask natural-language questions over your data using RAG (Retrieval-Augmented Generation).
 
 ---
 
-## 🛠 Tech Stack
+## Stack
 
-### Frontend
-- **Framework**: Next.js 15 (App Router)
-- **Styling**: TailwindCSS + Lucide Icons
-- **Animations**: Framer Motion
-- **API Client**: Axios with Interceptors
-
-### Backend
-- **Framework**: NestJS (TypeScript)
-- **Database**: MongoDB (Mongoose)
-- **Vector DB**: Qdrant
-- **Queue System**: BullMQ + Redis
-- **Authentication**: Passport.js + JWT
-
-### AI Layer
-- **LLM**: Google Generative AI (Gemini Flash)
-- **Embeddings**: Local CPU-based embeddings (`@xenova/transformers`)
-- **OCR**: Tesseract.js
+| Layer | Tech |
+|---|---|
+| **Frontend** | Next.js 16, React 19, Tailwind CSS v4, Framer Motion |
+| **Backend** | NestJS 11 (TypeScript) |
+| **Database** | MongoDB (users & content metadata) |
+| **Vector DB** | Qdrant (semantic search embeddings) |
+| **Queue** | BullMQ + Redis (async content processing) |
+| **Embeddings** | Hugging Face `all-MiniLM-L6-v2` (local, 384d, no API cost) |
+| **LLM** | Google Gemini (summarization + RAG Q&A) |
 
 ---
 
-## 🏗 System Architecture
+## Features
 
-```mermaid
-graph TD
-    User((User)) --> FE[Next.js Frontend]
-    FE --> BE[NestJS API]
-    BE --> DB[(MongoDB)]
-    BE --> Queue[BullMQ / Redis]
-    Queue --> Worker[Extraction Worker]
-    Worker --> Extract[Content Extraction]
-    Extract --> Embed[Local Embedding Gen]
-    Embed --> Vector[(Qdrant Vector DB)]
-    BE --> RAG[Gemini AI]
-    RAG --> Vector
+- **Save anything** — links, PDFs, images, manual notes
+- **Auto-extraction** — web scraping (Cheerio), PDF parsing, YouTube transcripts
+- **Semantic search** — search by meaning using vector similarity
+- **RAG Q&A** — ask your brain questions, get answers grounded in your data
+- **Share your brain** — toggle public access with a unique hash link
+- **Privacy** — all embeddings isolated per user; private by default
+
+---
+
+## Quick Start (Local)
+
+### 1. Start infrastructure
+
+```bash
+docker compose up mongodb qdrant redis -d
 ```
 
----
+### 2. Run the backend
 
-## ⚙️ Environment Variables
-
-### Backend (`super-brain-be/.env`)
-```env
-PORT=3000
-MONGO_URL=your_mongodb_atlas_uri
-REDIS_HOST=your_redis_host
-REDIS_PORT=your_redis_port
-REDIS_PASSWORD=your_redis_password
-JWT_SECRET=your_jwt_secret
-GEMINI_API_KEY=your_google_gemini_api_key
-QDRANT_URL=your_qdrant_cloud_url
-QDRANT_API_KEY=your_qdrant_api_key
-```
-
-### Frontend (`super-brain-fe/.env.local`)
-```env
-NEXT_PUBLIC_API_URL=https://your-backend-url.com/api/v1
-```
-
----
-
-## 🏃‍♂️ Getting Started
-
-### 1. Prerequisites
-- Node.js v20+
-- MongoDB instance (Local or Atlas)
-- Redis instance (Local or Upstash)
-- Qdrant instance (Local or Cloud)
-
-### 2. Backend Setup
 ```bash
 cd super-brain-be
+cp .env.example .env
+# Edit .env — set GEMINI_API_KEY at minimum
 npm install
 npm run start:dev
 ```
 
-### 3. Frontend Setup
+### 3. Run the frontend
+
 ```bash
 cd super-brain-fe
+cp .env.example .env.local
 npm install
 npm run dev
 ```
 
----
-
-## 📜 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
+Frontend: http://localhost:3001  
+Backend API: http://localhost:3000/api/v1  
+Health check: http://localhost:3000/api/v1/health
 
 ---
 
-## 🤝 Contributing
+## Full Stack with Docker
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+```bash
+# Build and start everything
+docker compose up --build
+
+# Frontend: http://localhost:4000
+# Backend:  http://localhost:3000
+```
+
+---
+
+## Environment Variables
+
+### Backend (`super-brain-be/.env`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | ✅ | Google Gemini API key (LLM) |
+| `MONGO_URL` | ✅ | MongoDB connection string |
+| `QDRANT_URL` | ✅ | Qdrant URL (`http://127.0.0.1:6333` local) |
+| `QDRANT_API_KEY` | Cloud only | Qdrant Cloud API key |
+| `REDIS_URL` | ✅ | Redis URL (or use `REDIS_HOST`/`REDIS_PORT`) |
+| `JWT_SECRET` | ✅ | JWT signing secret (use a long random string) |
+| `ALLOWED_ORIGINS` | Prod only | Comma-separated CORS allowed origins |
+| `PORT` | No | Server port (default: `3000`) |
+
+### Frontend (`super-brain-fe/.env.local`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | ✅ | Backend API URL (e.g., `http://localhost:3000/api/v1`) |
+
+---
+
+## Architecture
+
+```
+User → Next.js Frontend
+         ↓ Axios + JWT Bearer
+       NestJS Backend (port 3000)
+         ├── Auth (signup/signin → JWT)
+         ├── Content (CRUD + file upload)
+         │     └── BullMQ queue → ExtractionProcessor
+         │           ├── Cheerio (web) / pdf-parse / YouTube Transcript
+         │           ├── Gemini (summarization)
+         │           ├── HuggingFace MiniLM (embeddings, local)
+         │           └── Qdrant (vector upsert)
+         ├── AI (semantic search + RAG Q&A)
+         └── Share (public brain links)
+```
+
+---
+
+## API Endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/health` | — | Health check |
+| `POST` | `/api/v1/signup` | — | Register user |
+| `POST` | `/api/v1/signin` | — | Login, get JWT |
+| `GET` | `/api/v1/content` | JWT | List user's content |
+| `POST` | `/api/v1/content` | JWT | Add link/note |
+| `POST` | `/api/v1/content/upload` | JWT | Upload file (PDF/image) |
+| `DELETE` | `/api/v1/content/:id` | JWT | Delete content + vectors |
+| `GET` | `/api/v1/ai/search?q=...` | JWT | Semantic vector search |
+| `POST` | `/api/v1/ai/ask` | JWT | RAG Q&A with chat history |
+| `POST` | `/api/v1/ai/reindex` | JWT | Re-embed all content |
+| `POST` | `/api/v1/brain/share` | JWT | Toggle public sharing |
+| `GET` | `/api/v1/brain/:hash` | — | View shared brain |

@@ -1,16 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
 import { Sidebar } from "@/components/Sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
-
 import { Suspense } from "react";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
 
 export const metadata: Metadata = {
   title: "SuperBrain - Your Second Brain",
@@ -24,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} antialiased`}>
+      <body className="antialiased">
         <AuthProvider>
           <div className="flex min-h-screen bg-background text-foreground">
             <Suspense fallback={<div className="w-72 h-screen border-r-4 border-border bg-background hidden lg:block" />}>

@@ -38,14 +38,14 @@ let AuthController = class AuthController {
 };
 exports.AuthController = AuthController;
 __decorate([
-    (0, common_1.Post)('signup'),
+    (0, common_1.Post)(['signup', 'auth/signup', 'user/signup']),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "signup", null);
 __decorate([
-    (0, common_1.Post)('signin'),
+    (0, common_1.Post)(['signin', 'auth/signin', 'user/signin']),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),

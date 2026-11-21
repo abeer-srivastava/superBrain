@@ -6,7 +6,7 @@ import { SignupSchema, SigninSchema, SignupDto, SigninDto } from './dto/auth.dto
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('signup')
+  @Post(['signup', 'auth/signup', 'user/signup'])
   async signup(@Body() body: any) {
     const parsed = SignupSchema.safeParse(body);
     if (!parsed.success) {
@@ -15,7 +15,7 @@ export class AuthController {
     return this.authService.signup(parsed.data);
   }
 
-  @Post('signin')
+  @Post(['signin', 'auth/signin', 'user/signin'])
   async signin(@Body() body: any) {
     const parsed = SigninSchema.safeParse(body);
     if (!parsed.success) {

@@ -5,7 +5,10 @@ export declare class EmbeddingService implements OnModuleInit {
     private readonly modelName;
     readonly dimensions = 384;
     private modelReady;
-    onModuleInit(): Promise<void>;
+    private initPromise;
+    onModuleInit(): void;
+    private loadModel;
+    private ensureReady;
     embedOne(text: string): Promise<number[]>;
     embedMany(texts: string[]): Promise<number[][]>;
 }

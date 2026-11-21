@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BullModule } from '@nestjs/bullmq';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { ContentModule } from './content/content.module';
@@ -41,7 +40,6 @@ import { ShareModule } from './share/share.module';
               },
             };
           } catch (e) {
-            // Fallback if URL parsing fails
             return {
               connection: {
                 host: redisUrl.replace(/^https?:\/\//, ''),
@@ -71,6 +69,5 @@ import { ShareModule } from './share/share.module';
     ShareModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

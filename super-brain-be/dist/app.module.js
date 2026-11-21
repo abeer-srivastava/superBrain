@@ -12,7 +12,6 @@ const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const bullmq_1 = require("@nestjs/bullmq");
 const app_controller_1 = require("./app.controller");
-const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
 const user_module_1 = require("./user/user.module");
 const content_module_1 = require("./content/content.module");
@@ -83,7 +82,6 @@ exports.AppModule = AppModule = __decorate([
             share_module_1.ShareModule,
         ],
         controllers: [app_controller_1.AppController],
-        providers: [app_service_1.AppService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

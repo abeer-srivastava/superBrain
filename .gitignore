@@ -1,0 +1,21 @@
+# Root-level gitignore for SuperBrain monorepo
+# Each sub-project also has its own .gitignore
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.suo
+*.user
+
+# Logs
+*.log
+
+# Docker override files (local developer overrides)
+docker-compose.override.yml

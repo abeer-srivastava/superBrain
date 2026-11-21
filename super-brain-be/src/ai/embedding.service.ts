@@ -7,37 +7,59 @@ export class EmbeddingService implements OnModuleInit {
   private readonly modelName = 'Xenova/all-MiniLM-L6-v2';
   readonly dimensions = 384;
   private modelReady = false;
+  private initPromise: Promise<void> | null = null;
 
-  async onModuleInit() {
-    let retries = 5;
-    let delayMs = 5000;
+  onModuleInit() {
+    // Load model asynchronously in the background so the NestJS HTTP server
+    // starts listening on port 3000 immediately without blocking bootstrap.
+    this.initPromise = this.loadModel();
+  }
+
+  private async loadModel(): Promise<void> {
+    let retries = 3;
+    let delayMs = 3000;
 
     while (retries > 0) {
       try {
         this.logger.log(`Loading local embedding model: ${this.modelName} (Attempts left: ${retries})...`);
         const { pipeline, env } = await import('@huggingface/transformers');
-        
-        // Use HuggingFace mirror if the main domain is blocked in this region
-        env.remoteHost = 'https://hf-mirror.com';
-        
+
+        // Allow overriding remote host via env, default to official huggingface.co
+        if (process.env.HF_ENDPOINT) {
+          env.remoteHost = process.env.HF_ENDPOINT;
+        }
+
         this.extractor = await pipeline('feature-extraction', this.modelName, {
           dtype: 'fp32',
         });
         this.modelReady = true;
         this.logger.log(
-          `Local embedding model loaded: ${this.modelName} (${this.dimensions}d) — no API calls needed`,
+          `Local embedding model loaded: ${this.modelName} (${this.dimensions}d) — ready for vector search`,
         );
-        return; // Success, exit loop
-      } catch (error) {
+        return;
+      } catch (error: any) {
         retries--;
         this.logger.warn(`Failed to load embedding model: ${error.message}. Retrying in ${delayMs / 1000}s...`);
         if (retries === 0) {
           this.logger.error('Failed to load local embedding model after multiple attempts', error);
-          throw error;
+          return;
         }
         await new Promise((resolve) => setTimeout(resolve, delayMs));
-        delayMs *= 2; // Exponential backoff
+        delayMs *= 2;
       }
+    }
+  }
+
+  private async ensureReady(timeoutMs = 60000): Promise<void> {
+    if (this.modelReady && this.extractor) return;
+    if (this.initPromise) {
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Embedding model loading timed out')), timeoutMs),
+      );
+      await Promise.race([this.initPromise, timeout]);
+    }
+    if (!this.modelReady) {
+      throw new Error('Embedding model not ready yet');
     }
   }
 
@@ -45,9 +67,7 @@ export class EmbeddingService implements OnModuleInit {
    * Embed a single text string. Used for search queries.
    */
   async embedOne(text: string): Promise<number[]> {
-    if (!this.modelReady) {
-      throw new Error('Embedding model not loaded yet');
-    }
+    await this.ensureReady();
     const truncated = text.substring(0, 8000);
     const output = await this.extractor(truncated, {
       pooling: 'mean',
@@ -61,9 +81,7 @@ export class EmbeddingService implements OnModuleInit {
    * Processes in batches of 32 to manage memory — but there are NO rate limits.
    */
   async embedMany(texts: string[]): Promise<number[][]> {
-    if (!this.modelReady) {
-      throw new Error('Embedding model not loaded yet');
-    }
+    await this.ensureReady();
 
     const BATCH_SIZE = 32;
     const allEmbeddings: number[][] = [];

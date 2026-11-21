@@ -16,7 +16,7 @@ export declare class ShareController {
         hash?: undefined;
     }>;
     getSharedBrain(hash: string): Promise<{
-        username: any;
-        content: any[];
+        username: string | undefined;
+        content: import("../content/schemas/content.schema").ContentDocument[];
     }>;
 }
