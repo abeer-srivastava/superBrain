@@ -1,6 +1,13 @@
 import { Queue } from 'bullmq';
+import { IngestJob } from './queue.constants';
 export declare class QueueService {
-    private extractionQueue;
-    constructor(extractionQueue: Queue);
-    addExtractionJob(contentId: string, type: string, payload: any): Promise<void>;
+    private readonly queue;
+    constructor(queue: Queue<IngestJob>);
+    enqueueIngest(contentId: string, opts?: {
+        reembedOnly?: boolean;
+    }): Promise<void>;
+    ping(): Promise<boolean>;
+    counts(): Promise<{
+        [index: string]: number;
+    }>;
 }

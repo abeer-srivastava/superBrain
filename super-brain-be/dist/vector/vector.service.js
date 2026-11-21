@@ -12,146 +12,132 @@ var VectorService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VectorService = void 0;
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
 const js_client_rest_1 = require("@qdrant/js-client-rest");
+const env_1 = require("../config/env");
 let VectorService = VectorService_1 = class VectorService {
-    configService;
     client;
-    collectionName = 'secondbrain';
+    collection = (0, env_1.env)().QDRANT_COLLECTION;
     vectorSize = 384;
     logger = new common_1.Logger(VectorService_1.name);
-    constructor(configService) {
-        this.configService = configService;
-        const url = this.configService.get('QDRANT_URL', 'http://127.0.0.1:6333');
+    ready = false;
+    constructor() {
+        const url = (0, env_1.env)().QDRANT_URL;
         const options = {
             url,
-            apiKey: this.configService.get('QDRANT_API_KEY'),
+            apiKey: (0, env_1.env)().QDRANT_API_KEY || undefined,
             checkCompatibility: false,
         };
         if (url.startsWith('https://')) {
-            const match = url.match(/:(\d+)$/);
+            const match = url.match(/:(\d+)\/?$/);
             options.port = match ? parseInt(match[1], 10) : 443;
         }
         this.client = new js_client_rest_1.QdrantClient(options);
     }
     async onModuleInit() {
         try {
-            const collections = await this.client.getCollections();
-            const exists = collections.collections.find((c) => c.name === this.collectionName);
-            if (!exists) {
-                await this.createCollection();
-            }
-            else {
-                try {
-                    const info = await this.client.getCollection(this.collectionName);
-                    const currentSize = info.config.params.vectors.size;
-                    if (currentSize !== this.vectorSize) {
-                        this.logger.warn(`Dimension mismatch detected: collection has ${currentSize}d vectors, expected ${this.vectorSize}d. Recreating collection...`);
-                        await this.resetCollection();
-                    }
-                    else {
-                        this.logger.log(`Using existing Qdrant collection: ${this.collectionName} (${this.vectorSize}d)`);
-                        await this.ensurePayloadIndexes();
-                    }
-                }
-                catch (infoError) {
-                    this.logger.warn(`Could not verify collection dimensions: ${infoError.message}. Ensuring indexes...`);
-                    await this.ensurePayloadIndexes();
-                }
-            }
+            await this.ensureCollection();
+            this.ready = true;
         }
         catch (error) {
-            this.logger.error('Failed to initialize Qdrant collection', error);
+            this.logger.error(`Failed to initialise Qdrant collection: ${error.message}`);
         }
     }
-    async createCollection() {
-        await this.client.createCollection(this.collectionName, {
-            vectors: {
-                size: this.vectorSize,
-                distance: 'Cosine',
-            },
-        });
-        await this.ensurePayloadIndexes();
-        this.logger.log(`Created Qdrant collection: ${this.collectionName} with dimension ${this.vectorSize} and payload indexes`);
+    isReady() {
+        return this.ready;
     }
-    async ensurePayloadIndexes() {
-        const indexes = [
-            { field_name: 'userId', field_schema: 'keyword' },
-            { field_name: 'contentId', field_schema: 'keyword' },
-        ];
-        for (const idx of indexes) {
-            try {
-                await this.client.createPayloadIndex(this.collectionName, {
-                    field_name: idx.field_name,
-                    field_schema: idx.field_schema,
-                    wait: true,
-                });
-                this.logger.log(`Ensured payload index: ${idx.field_name} (${idx.field_schema})`);
-            }
-            catch (error) {
-                this.logger.warn(`Could not create index for ${idx.field_name}: ${error.message ?? error}`);
-            }
-        }
-    }
-    async resetCollection() {
+    async ping() {
         try {
-            await this.client.deleteCollection(this.collectionName);
-            await this.createCollection();
-            this.logger.log('Collection reset successfully');
+            await this.client.getCollections();
+            return true;
         }
-        catch (error) {
-            this.logger.error('Failed to reset collection', error);
-            throw error;
+        catch {
+            return false;
         }
     }
-    async upsertVectors(points) {
-        await this.client.upsert(this.collectionName, {
-            wait: true,
-            points,
-        });
+    async ensureCollection() {
+        const { collections } = await this.client.getCollections();
+        if (!collections.find((c) => c.name === this.collection)) {
+            await this.client.createCollection(this.collection, { vectors: { size: this.vectorSize, distance: 'Cosine' } });
+            this.logger.log(`Created Qdrant collection ${this.collection} (${this.vectorSize}d)`);
+        }
+        else {
+            const info = await this.client.getCollection(this.collection);
+            const size = info.config.params.vectors?.size;
+            if (size && size !== this.vectorSize) {
+                throw new Error(`Collection ${this.collection} has ${size}d vectors but the embedding model produces ${this.vectorSize}d. ` +
+                    `Set QDRANT_COLLECTION to a new name and run "npm run reindex".`);
+            }
+        }
+        for (const field_name of ['userId', 'contentId', 'type']) {
+            await this.client
+                .createPayloadIndex(this.collection, { field_name, field_schema: 'keyword', wait: true })
+                .catch(() => undefined);
+        }
     }
-    async searchSimilar(vector, userId, limit = 5) {
-        return this.client.search(this.collectionName, {
+    async upsert(points) {
+        if (points.length === 0)
+            return;
+        for (let i = 0; i < points.length; i += 256) {
+            await this.client.upsert(this.collection, { wait: true, points: points.slice(i, i + 256) });
+        }
+    }
+    async search(vector, userId, limit = 20, opts = {}) {
+        const must = [{ key: 'userId', match: { value: userId } }];
+        if (opts.type)
+            must.push({ key: 'type', match: { value: opts.type } });
+        if (opts.contentId)
+            must.push({ key: 'contentId', match: { value: opts.contentId } });
+        const must_not = opts.excludeContentId ? [{ key: 'contentId', match: { value: opts.excludeContentId } }] : [];
+        const hits = await this.client.search(this.collection, {
             vector,
             limit,
+            with_payload: true,
+            filter: { must, must_not },
+        });
+        return hits;
+    }
+    async documentVector(contentId, userId, sample = 4) {
+        const { points } = await this.client.scroll(this.collection, {
             filter: {
                 must: [
-                    {
-                        key: 'userId',
-                        match: {
-                            value: userId,
-                        },
-                    },
+                    { key: 'userId', match: { value: userId } },
+                    { key: 'contentId', match: { value: contentId } },
+                ],
+            },
+            limit: sample,
+            with_vector: true,
+            with_payload: false,
+        });
+        const vectors = points.map((p) => p.vector).filter((v) => Array.isArray(v));
+        if (vectors.length === 0)
+            return null;
+        const mean = new Array(vectors[0].length).fill(0);
+        for (const v of vectors)
+            for (let i = 0; i < v.length; i++)
+                mean[i] += v[i] / vectors.length;
+        return mean;
+    }
+    async deleteByContent(contentId, userId) {
+        await this.client.delete(this.collection, {
+            wait: true,
+            filter: {
+                must: [
+                    { key: 'userId', match: { value: userId } },
+                    { key: 'contentId', match: { value: contentId } },
                 ],
             },
         });
     }
-    async deleteByContentId(contentId) {
-        try {
-            await this.client.delete(this.collectionName, {
-                wait: true,
-                filter: {
-                    must: [
-                        {
-                            key: 'contentId',
-                            match: {
-                                value: contentId,
-                            },
-                        },
-                    ],
-                },
-            });
-            this.logger.log(`Deleted vectors for contentId: ${contentId}`);
-        }
-        catch (error) {
-            this.logger.error(`Failed to delete vectors for contentId ${contentId}`, error);
-            throw error;
-        }
+    async deleteByUser(userId) {
+        await this.client.delete(this.collection, {
+            wait: true,
+            filter: { must: [{ key: 'userId', match: { value: userId } }] },
+        });
     }
 };
 exports.VectorService = VectorService;
 exports.VectorService = VectorService = VectorService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __metadata("design:paramtypes", [])
 ], VectorService);
 //# sourceMappingURL=vector.service.js.map

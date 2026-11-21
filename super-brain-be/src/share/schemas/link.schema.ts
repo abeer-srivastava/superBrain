@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
-export type LinkDocument = Link & Document;
+export type LinkDocument = HydratedDocument<Link>;
 
 @Schema({ timestamps: true })
 export class Link {

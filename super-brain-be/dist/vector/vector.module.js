@@ -13,6 +13,7 @@ let VectorModule = class VectorModule {
 };
 exports.VectorModule = VectorModule;
 exports.VectorModule = VectorModule = __decorate([
+    (0, common_1.Global)(),
     (0, common_1.Module)({
         providers: [vector_service_1.VectorService],
         exports: [vector_service_1.VectorService],

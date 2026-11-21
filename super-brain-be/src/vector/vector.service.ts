@@ -1,154 +1,151 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { QdrantClient } from '@qdrant/js-client-rest';
+import { env } from '../config/env';
 
+export interface ChunkPayload {
+  contentId: string;
+  userId: string;
+  text: string;
+  chunkIndex: number;
+  title: string;
+  type: string;
+}
+
+export interface ChunkHit {
+  id: string | number;
+  score: number;
+  payload: ChunkPayload;
+}
+
+/**
+ * Every read and delete is scoped by userId as well as contentId, so a
+ * forged contentId can never touch another user's vectors.
+ */
 @Injectable()
 export class VectorService implements OnModuleInit {
-  private client: QdrantClient;
-  private readonly collectionName = 'secondbrain';
-  private readonly vectorSize = 384; // all-MiniLM-L6-v2 (local)
+  private readonly client: QdrantClient;
+  private readonly collection = env().QDRANT_COLLECTION;
+  readonly vectorSize = 384; // Xenova/all-MiniLM-L6-v2
   private readonly logger = new Logger(VectorService.name);
+  private ready = false;
 
-  constructor(private configService: ConfigService) {
-    const url = this.configService.get<string>('QDRANT_URL', 'http://127.0.0.1:6333');
-    const options: any = {
+  constructor() {
+    const url = env().QDRANT_URL;
+    const options: ConstructorParameters<typeof QdrantClient>[0] = {
       url,
-      apiKey: this.configService.get<string>('QDRANT_API_KEY'),
+      apiKey: env().QDRANT_API_KEY || undefined,
       checkCompatibility: false,
     };
-
-    // If it's HTTPS, force explicit port option to prevent client library from defaulting to 6333
+    // Qdrant client defaults to :6333 even for https URLs without an explicit port.
     if (url.startsWith('https://')) {
-      const match = url.match(/:(\d+)$/);
+      const match = url.match(/:(\d+)\/?$/);
       options.port = match ? parseInt(match[1], 10) : 443;
     }
-
     this.client = new QdrantClient(options);
   }
 
   async onModuleInit() {
     try {
-      const collections = await this.client.getCollections();
-      const exists = collections.collections.find((c) => c.name === this.collectionName);
-
-      if (!exists) {
-        await this.createCollection();
-      } else {
-        // Verify dimension compatibility — detect old 4096d NVIDIA vectors
-        try {
-          const info = await this.client.getCollection(this.collectionName);
-          const currentSize = (info.config.params.vectors as any).size;
-          if (currentSize !== this.vectorSize) {
-            this.logger.warn(
-              `Dimension mismatch detected: collection has ${currentSize}d vectors, expected ${this.vectorSize}d. Recreating collection...`
-            );
-            await this.resetCollection();
-          } else {
-            this.logger.log(`Using existing Qdrant collection: ${this.collectionName} (${this.vectorSize}d)`);
-            await this.ensurePayloadIndexes();
-          }
-        } catch (infoError) {
-          this.logger.warn(`Could not verify collection dimensions: ${infoError.message}. Ensuring indexes...`);
-          await this.ensurePayloadIndexes();
-        }
-      }
-    } catch (error) {
-      this.logger.error('Failed to initialize Qdrant collection', error);
+      await this.ensureCollection();
+      this.ready = true;
+    } catch (error: any) {
+      this.logger.error(`Failed to initialise Qdrant collection: ${error.message}`);
     }
   }
 
-  async createCollection() {
-    await this.client.createCollection(this.collectionName, {
-      vectors: {
-        size: this.vectorSize, // Gemini text-embedding-004
-        distance: 'Cosine',
-      },
-    });
-
-    await this.ensurePayloadIndexes();
-    this.logger.log(`Created Qdrant collection: ${this.collectionName} with dimension ${this.vectorSize} and payload indexes`);
+  isReady() {
+    return this.ready;
   }
 
-  /**
-   * Idempotently creates all required payload indexes.
-   * Qdrant's createPayloadIndex is a no-op if the index already exists,
-   * so this is safe to call on every startup.
-   */
-  private async ensurePayloadIndexes() {
-    const indexes: { field_name: string; field_schema: 'keyword' | 'integer' | 'float' | 'bool' | 'geo' | 'text' }[] = [
-      { field_name: 'userId', field_schema: 'keyword' },
-      { field_name: 'contentId', field_schema: 'keyword' },
-    ];
-
-    for (const idx of indexes) {
-      try {
-        await this.client.createPayloadIndex(this.collectionName, {
-          field_name: idx.field_name,
-          field_schema: idx.field_schema,
-          wait: true,
-        });
-        this.logger.log(`Ensured payload index: ${idx.field_name} (${idx.field_schema})`);
-      } catch (error) {
-        // Log but don't throw — index may already exist or be in progress
-        this.logger.warn(`Could not create index for ${idx.field_name}: ${error.message ?? error}`);
-      }
-    }
-  }
-
-  async resetCollection() {
+  async ping(): Promise<boolean> {
     try {
-      await this.client.deleteCollection(this.collectionName);
-      await this.createCollection();
-      this.logger.log('Collection reset successfully');
-    } catch (error) {
-      this.logger.error('Failed to reset collection', error);
-      throw error;
+      await this.client.getCollections();
+      return true;
+    } catch {
+      return false;
     }
   }
 
-  async upsertVectors(points: { id: string; vector: number[]; payload: any }[]) {
-    await this.client.upsert(this.collectionName, {
-      wait: true,
-      points,
-    });
+  private async ensureCollection() {
+    const { collections } = await this.client.getCollections();
+    if (!collections.find((c) => c.name === this.collection)) {
+      await this.client.createCollection(this.collection, { vectors: { size: this.vectorSize, distance: 'Cosine' } });
+      this.logger.log(`Created Qdrant collection ${this.collection} (${this.vectorSize}d)`);
+    } else {
+      const info = await this.client.getCollection(this.collection);
+      const size = (info.config.params.vectors as { size?: number })?.size;
+      if (size && size !== this.vectorSize) {
+        // Never silently destroy data: an operator must re-index explicitly.
+        throw new Error(
+          `Collection ${this.collection} has ${size}d vectors but the embedding model produces ${this.vectorSize}d. ` +
+            `Set QDRANT_COLLECTION to a new name and run "npm run reindex".`,
+        );
+      }
+    }
+    for (const field_name of ['userId', 'contentId', 'type']) {
+      await this.client
+        .createPayloadIndex(this.collection, { field_name, field_schema: 'keyword', wait: true })
+        .catch(() => undefined);
+    }
   }
 
-  async searchSimilar(vector: number[], userId: string, limit = 5) {
-    return this.client.search(this.collectionName, {
+  async upsert(points: { id: string; vector: number[]; payload: ChunkPayload }[]) {
+    if (points.length === 0) return;
+    for (let i = 0; i < points.length; i += 256) {
+      await this.client.upsert(this.collection, { wait: true, points: points.slice(i, i + 256) as any });
+    }
+  }
+
+  async search(vector: number[], userId: string, limit = 20, opts: { excludeContentId?: string; contentId?: string; type?: string } = {}) {
+    const must: any[] = [{ key: 'userId', match: { value: userId } }];
+    if (opts.type) must.push({ key: 'type', match: { value: opts.type } });
+    if (opts.contentId) must.push({ key: 'contentId', match: { value: opts.contentId } });
+    const must_not = opts.excludeContentId ? [{ key: 'contentId', match: { value: opts.excludeContentId } }] : [];
+    const hits = await this.client.search(this.collection, {
       vector,
       limit,
+      with_payload: true,
+      filter: { must, must_not },
+    });
+    return hits as unknown as ChunkHit[];
+  }
+
+  /** Mean of the first few chunk vectors — a cheap "document vector" for similarity. */
+  async documentVector(contentId: string, userId: string, sample = 4): Promise<number[] | null> {
+    const { points } = await this.client.scroll(this.collection, {
       filter: {
         must: [
-          {
-            key: 'userId',
-            match: {
-              value: userId,
-            },
-          },
+          { key: 'userId', match: { value: userId } },
+          { key: 'contentId', match: { value: contentId } },
+        ],
+      },
+      limit: sample,
+      with_vector: true,
+      with_payload: false,
+    });
+    const vectors = points.map((p) => p.vector as number[]).filter((v) => Array.isArray(v));
+    if (vectors.length === 0) return null;
+    const mean = new Array(vectors[0].length).fill(0);
+    for (const v of vectors) for (let i = 0; i < v.length; i++) mean[i] += v[i] / vectors.length;
+    return mean;
+  }
+
+  async deleteByContent(contentId: string, userId: string) {
+    await this.client.delete(this.collection, {
+      wait: true,
+      filter: {
+        must: [
+          { key: 'userId', match: { value: userId } },
+          { key: 'contentId', match: { value: contentId } },
         ],
       },
     });
   }
 
-  async deleteByContentId(contentId: string): Promise<void> {
-    try {
-      await this.client.delete(this.collectionName, {
-        wait: true,
-        filter: {
-          must: [
-            {
-              key: 'contentId',
-              match: {
-                value: contentId,
-              },
-            },
-          ],
-        },
-      });
-      this.logger.log(`Deleted vectors for contentId: ${contentId}`);
-    } catch (error) {
-      this.logger.error(`Failed to delete vectors for contentId ${contentId}`, error);
-      throw error;
-    }
+  async deleteByUser(userId: string) {
+    await this.client.delete(this.collection, {
+      wait: true,
+      filter: { must: [{ key: 'userId', match: { value: userId } }] },
+    });
   }
 }

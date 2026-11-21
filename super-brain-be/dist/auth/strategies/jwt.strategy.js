@@ -13,32 +13,31 @@ exports.JwtStrategy = void 0;
 const passport_jwt_1 = require("passport-jwt");
 const passport_1 = require("@nestjs/passport");
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
 const user_service_1 = require("../../user/user.service");
+const env_1 = require("../../config/env");
+const auth_service_1 = require("../auth.service");
+const fromCookie = (req) => req?.cookies?.[auth_service_1.SESSION_COOKIE] ?? null;
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
-    configService;
     userService;
-    constructor(configService, userService) {
+    constructor(userService) {
         super({
-            jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            jwtFromRequest: passport_jwt_1.ExtractJwt.fromExtractors([fromCookie, passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken()]),
             ignoreExpiration: false,
-            secretOrKey: configService.get('JWT_SECRET', 'supersecret'),
+            secretOrKey: (0, env_1.env)().JWT_SECRET,
         });
-        this.configService = configService;
         this.userService = userService;
     }
     async validate(payload) {
         const user = await this.userService.findById(payload.sub);
-        if (!user) {
-            throw new common_1.UnauthorizedException();
+        if (!user || (user.tokenVersion ?? 0) !== (payload.tv ?? 0)) {
+            throw new common_1.UnauthorizedException('Your session has expired. Please sign in again.');
         }
-        return { userId: payload.sub, username: payload.username };
+        return { userId: user._id.toString(), username: user.username };
     }
 };
 exports.JwtStrategy = JwtStrategy;
 exports.JwtStrategy = JwtStrategy = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService,
-        user_service_1.UserService])
+    __metadata("design:paramtypes", [user_service_1.UserService])
 ], JwtStrategy);
 //# sourceMappingURL=jwt.strategy.js.map

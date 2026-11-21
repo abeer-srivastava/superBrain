@@ -1,29 +1,39 @@
 import { OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+export interface ChunkPayload {
+    contentId: string;
+    userId: string;
+    text: string;
+    chunkIndex: number;
+    title: string;
+    type: string;
+}
+export interface ChunkHit {
+    id: string | number;
+    score: number;
+    payload: ChunkPayload;
+}
 export declare class VectorService implements OnModuleInit {
-    private configService;
-    private client;
-    private readonly collectionName;
-    private readonly vectorSize;
+    private readonly client;
+    private readonly collection;
+    readonly vectorSize = 384;
     private readonly logger;
-    constructor(configService: ConfigService);
+    private ready;
+    constructor();
     onModuleInit(): Promise<void>;
-    createCollection(): Promise<void>;
-    private ensurePayloadIndexes;
-    resetCollection(): Promise<void>;
-    upsertVectors(points: {
+    isReady(): boolean;
+    ping(): Promise<boolean>;
+    private ensureCollection;
+    upsert(points: {
         id: string;
         vector: number[];
-        payload: any;
+        payload: ChunkPayload;
     }[]): Promise<void>;
-    searchSimilar(vector: number[], userId: string, limit?: number): Promise<{
-        id: import("node_modules/@qdrant/js-client-rest/dist/types/openapi/generated_schema.js", { with: { "resolution-mode": "import" } }).components["schemas"]["ExtendedPointId"];
-        version: number;
-        score: number;
-        payload?: import("node_modules/@qdrant/js-client-rest/dist/types/openapi/generated_schema.js", { with: { "resolution-mode": "import" } }).components["schemas"]["Payload"] | (Record<string, unknown> | null);
-        vector?: import("node_modules/@qdrant/js-client-rest/dist/types/openapi/generated_schema.js", { with: { "resolution-mode": "import" } }).components["schemas"]["VectorStructOutput"] | (Record<string, unknown> | null);
-        shard_key?: import("node_modules/@qdrant/js-client-rest/dist/types/openapi/generated_schema.js", { with: { "resolution-mode": "import" } }).components["schemas"]["ShardKey"] | (Record<string, unknown> | null);
-        order_value?: import("node_modules/@qdrant/js-client-rest/dist/types/openapi/generated_schema.js", { with: { "resolution-mode": "import" } }).components["schemas"]["OrderValue"] | (Record<string, unknown> | null);
-    }[]>;
-    deleteByContentId(contentId: string): Promise<void>;
+    search(vector: number[], userId: string, limit?: number, opts?: {
+        excludeContentId?: string;
+        contentId?: string;
+        type?: string;
+    }): Promise<ChunkHit[]>;
+    documentVector(contentId: string, userId: string, sample?: number): Promise<number[] | null>;
+    deleteByContent(contentId: string, userId: string): Promise<void>;
+    deleteByUser(userId: string): Promise<void>;
 }

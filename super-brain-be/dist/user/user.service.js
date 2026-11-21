@@ -22,15 +22,47 @@ let UserService = class UserService {
     constructor(userModel) {
         this.userModel = userModel;
     }
-    async create(userDto) {
-        const createdUser = new this.userModel(userDto);
-        return createdUser.save();
+    create(data) {
+        return this.userModel.create(data);
     }
-    async findByUsername(username) {
+    findByUsername(username) {
         return this.userModel.findOne({ username }).exec();
     }
-    async findById(id) {
+    findByEmail(email) {
+        return this.userModel.findOne({ email: email.toLowerCase() }).exec();
+    }
+    findByIdentifierWithSecret(identifier) {
+        const query = identifier.includes('@')
+            ? { email: identifier.toLowerCase() }
+            : { username: identifier };
+        return this.userModel.findOne(query).select('+passwordHash').exec();
+    }
+    findByIdWithSecret(id) {
+        return this.userModel.findById(id).select('+passwordHash').exec();
+    }
+    findById(id) {
         return this.userModel.findById(id).exec();
+    }
+    async update(id, updates) {
+        const { $inc, ...set } = updates;
+        return this.userModel
+            .findByIdAndUpdate(id, { $set: set, ...($inc ? { $inc } : {}) }, { returnDocument: 'after' })
+            .exec();
+    }
+    async bumpTokenVersion(id) {
+        return this.userModel.findByIdAndUpdate(id, { $inc: { tokenVersion: 1 } }, { returnDocument: 'after' }).exec();
+    }
+    async deleteById(id) {
+        await this.userModel.deleteOne({ _id: id }).exec();
+    }
+    toPublic(user) {
+        return {
+            id: user._id.toString(),
+            username: user.username,
+            email: user.email,
+            displayName: user.displayName ?? null,
+            createdAt: user.createdAt,
+        };
     }
 };
 exports.UserService = UserService;

@@ -14,79 +14,61 @@ let EmbeddingService = EmbeddingService_1 = class EmbeddingService {
     logger = new common_1.Logger(EmbeddingService_1.name);
     modelName = 'Xenova/all-MiniLM-L6-v2';
     dimensions = 384;
-    modelReady = false;
     initPromise = null;
+    ready = false;
     onModuleInit() {
         this.initPromise = this.loadModel();
     }
+    isReady() {
+        return this.ready;
+    }
     async loadModel() {
-        let retries = 3;
         let delayMs = 3000;
-        while (retries > 0) {
+        for (let attempt = 1; attempt <= 3; attempt++) {
             try {
-                this.logger.log(`Loading local embedding model: ${this.modelName} (Attempts left: ${retries})...`);
                 const { pipeline, env } = await import('@huggingface/transformers');
-                if (process.env.HF_ENDPOINT) {
+                if (process.env.HF_ENDPOINT)
                     env.remoteHost = process.env.HF_ENDPOINT;
-                }
-                this.extractor = await pipeline('feature-extraction', this.modelName, {
-                    dtype: 'fp32',
-                });
-                this.modelReady = true;
-                this.logger.log(`Local embedding model loaded: ${this.modelName} (${this.dimensions}d) — ready for vector search`);
+                this.extractor = await pipeline('feature-extraction', this.modelName, { dtype: 'fp32' });
+                this.ready = true;
+                this.logger.log(`Embedding model ready: ${this.modelName} (${this.dimensions}d)`);
                 return;
             }
             catch (error) {
-                retries--;
-                this.logger.warn(`Failed to load embedding model: ${error.message}. Retrying in ${delayMs / 1000}s...`);
-                if (retries === 0) {
-                    this.logger.error('Failed to load local embedding model after multiple attempts', error);
+                this.logger.warn(`Embedding model load failed (attempt ${attempt}/3): ${error.message}`);
+                if (attempt === 3)
                     return;
-                }
-                await new Promise((resolve) => setTimeout(resolve, delayMs));
+                await new Promise((r) => setTimeout(r, delayMs));
                 delayMs *= 2;
             }
         }
     }
-    async ensureReady(timeoutMs = 60000) {
-        if (this.modelReady && this.extractor)
+    async ensureReady(timeoutMs = 90_000) {
+        if (this.ready)
             return;
         if (this.initPromise) {
-            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Embedding model loading timed out')), timeoutMs));
-            await Promise.race([this.initPromise, timeout]);
+            let timer;
+            const timeout = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error('Embedding model is still loading')), timeoutMs);
+            });
+            await Promise.race([this.initPromise, timeout]).finally(() => clearTimeout(timer));
         }
-        if (!this.modelReady) {
-            throw new Error('Embedding model not ready yet');
-        }
+        if (!this.ready)
+            throw new Error('Embedding model is not available');
     }
     async embedOne(text) {
-        await this.ensureReady();
-        const truncated = text.substring(0, 8000);
-        const output = await this.extractor(truncated, {
-            pooling: 'mean',
-            normalize: true,
-        });
-        return Array.from(output.data);
+        const [v] = await this.embedMany([text]);
+        return v;
     }
-    async embedMany(texts) {
+    async embedMany(texts, batchSize = 16) {
         await this.ensureReady();
-        const BATCH_SIZE = 32;
-        const allEmbeddings = [];
-        for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-            const batch = texts.slice(i, i + BATCH_SIZE);
-            const batchIndex = Math.floor(i / BATCH_SIZE) + 1;
-            const totalBatches = Math.ceil(texts.length / BATCH_SIZE);
-            this.logger.log(`Embedding batch ${batchIndex}/${totalBatches} (${batch.length} texts)`);
-            const truncatedBatch = batch.map((t) => t.substring(0, 8000));
-            for (const text of truncatedBatch) {
-                const output = await this.extractor(text, {
-                    pooling: 'mean',
-                    normalize: true,
-                });
-                allEmbeddings.push(Array.from(output.data));
-            }
+        const out = [];
+        for (let i = 0; i < texts.length; i += batchSize) {
+            const batch = texts.slice(i, i + batchSize).map((t) => t.slice(0, 4000));
+            const tensor = await this.extractor(batch, { pooling: 'mean', normalize: true });
+            out.push(...tensor.tolist());
         }
-        return allEmbeddings;
+        return out;
     }
 };
 exports.EmbeddingService = EmbeddingService;

@@ -42,11 +42,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AuthService = void 0;
+exports.AuthService = exports.SESSION_COOKIE = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
-const user_service_1 = require("../user/user.service");
 const bcrypt = __importStar(require("bcrypt"));
+const user_service_1 = require("../user/user.service");
+const env_1 = require("../config/env");
+exports.SESSION_COOKIE = 'sb_session';
+const BCRYPT_ROUNDS = 12;
+const DUMMY_HASH = bcrypt.hashSync('superbrain-timing-equaliser', 10);
 let AuthService = class AuthService {
     userService;
     jwtService;
@@ -54,36 +58,62 @@ let AuthService = class AuthService {
         this.userService = userService;
         this.jwtService = jwtService;
     }
-    async signup(signupDto) {
-        const existingUser = await this.userService.findByUsername(signupDto.username);
-        if (existingUser) {
-            throw new common_1.BadRequestException('Username already exists');
+    async signup(dto) {
+        const [byName, byEmail] = await Promise.all([
+            this.userService.findByUsername(dto.username),
+            this.userService.findByEmail(dto.email),
+        ]);
+        if (byName)
+            throw new common_1.ConflictException({ message: 'That username is taken', errors: [{ path: 'username', message: 'That username is taken' }] });
+        if (byEmail)
+            throw new common_1.ConflictException({ message: 'An account with that email already exists', errors: [{ path: 'email', message: 'An account with that email already exists' }] });
+        const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+        try {
+            return await this.userService.create({ email: dto.email, username: dto.username, passwordHash });
         }
-        const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(signupDto.password, salt);
-        const user = await this.userService.create({
-            email: signupDto.email,
-            username: signupDto.username,
-            passwordHash,
-        });
-        return this.generateToken(user);
+        catch (err) {
+            if (err?.code === 11000)
+                throw new common_1.ConflictException('That username or email is already registered');
+            throw err;
+        }
     }
-    async signin(signinDto) {
-        const user = await this.userService.findByUsername(signinDto.username);
-        if (!user) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
-        }
-        const isMatch = await bcrypt.compare(signinDto.password, user.passwordHash);
-        if (!isMatch) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
-        }
-        return this.generateToken(user);
+    async validateCredentials(dto) {
+        const user = await this.userService.findByIdentifierWithSecret(dto.identifier);
+        const ok = await bcrypt.compare(dto.password, user?.passwordHash ?? DUMMY_HASH);
+        if (!user || !ok)
+            throw new common_1.UnauthorizedException('Incorrect username/email or password');
+        return user;
     }
-    generateToken(user) {
-        const payload = { username: user.username, sub: user._id };
+    async verifyPassword(userId, password) {
+        const user = await this.userService.findByIdWithSecret(userId);
+        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+            throw new common_1.UnauthorizedException('Incorrect password');
+        }
+        return user;
+    }
+    hashPassword(password) {
+        return bcrypt.hash(password, BCRYPT_ROUNDS);
+    }
+    issueToken(user) {
+        const payload = { sub: user._id.toString(), username: user.username, tv: user.tokenVersion ?? 0 };
+        return this.jwtService.sign(payload);
+    }
+    cookieOptions() {
         return {
-            token: this.jwtService.sign(payload),
+            httpOnly: true,
+            secure: (0, env_1.env)().NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
         };
+    }
+    setSessionCookie(res, user) {
+        res.cookie(exports.SESSION_COOKIE, this.issueToken(user), {
+            ...this.cookieOptions(),
+            maxAge: (0, env_1.env)().SESSION_TTL_DAYS * 24 * 60 * 60 * 1000,
+        });
+    }
+    clearSessionCookie(res) {
+        res.clearCookie(exports.SESSION_COOKIE, this.cookieOptions());
     }
 };
 exports.AuthService = AuthService;

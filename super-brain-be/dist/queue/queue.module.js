@@ -10,24 +10,14 @@ exports.QueueModule = void 0;
 const common_1 = require("@nestjs/common");
 const bullmq_1 = require("@nestjs/bullmq");
 const queue_service_1 = require("./queue.service");
-const extraction_processor_1 = require("./processors/extraction.processor");
-const content_module_1 = require("../content/content.module");
-const vector_module_1 = require("../vector/vector.module");
-const ai_module_1 = require("../ai/ai.module");
+const queue_constants_1 = require("./queue.constants");
 let QueueModule = class QueueModule {
 };
 exports.QueueModule = QueueModule;
 exports.QueueModule = QueueModule = __decorate([
     (0, common_1.Module)({
-        imports: [
-            bullmq_1.BullModule.registerQueue({
-                name: 'extraction',
-            }),
-            (0, common_1.forwardRef)(() => content_module_1.ContentModule),
-            vector_module_1.VectorModule,
-            ai_module_1.AiModule,
-        ],
-        providers: [queue_service_1.QueueService, extraction_processor_1.ExtractionProcessor],
+        imports: [bullmq_1.BullModule.registerQueue({ name: queue_constants_1.INGEST_QUEUE })],
+        providers: [queue_service_1.QueueService],
         exports: [queue_service_1.QueueService],
     })
 ], QueueModule);

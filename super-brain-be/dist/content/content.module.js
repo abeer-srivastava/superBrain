@@ -9,33 +9,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContentModule = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
-const platform_express_1 = require("@nestjs/platform-express");
 const content_service_1 = require("./content.service");
 const content_controller_1 = require("./content.controller");
 const content_schema_1 = require("./schemas/content.schema");
 const queue_module_1 = require("../queue/queue.module");
-const vector_module_1 = require("../vector/vector.module");
-const multer_1 = require("multer");
-const path_1 = require("path");
 let ContentModule = class ContentModule {
 };
 exports.ContentModule = ContentModule;
 exports.ContentModule = ContentModule = __decorate([
     (0, common_1.Module)({
-        imports: [
-            mongoose_1.MongooseModule.forFeature([{ name: content_schema_1.Content.name, schema: content_schema_1.ContentSchema }]),
-            (0, common_1.forwardRef)(() => queue_module_1.QueueModule),
-            vector_module_1.VectorModule,
-            platform_express_1.MulterModule.register({
-                storage: (0, multer_1.diskStorage)({
-                    destination: './uploads',
-                    filename: (req, file, cb) => {
-                        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
-                        return cb(null, `${randomName}${(0, path_1.extname)(file.originalname)}`);
-                    }
-                })
-            })
-        ],
+        imports: [mongoose_1.MongooseModule.forFeature([{ name: content_schema_1.Content.name, schema: content_schema_1.ContentSchema }]), queue_module_1.QueueModule],
         controllers: [content_controller_1.ContentController],
         providers: [content_service_1.ContentService],
         exports: [content_service_1.ContentService],

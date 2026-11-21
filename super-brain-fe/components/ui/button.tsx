@@ -1,55 +1,52 @@
-import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { Spinner } from "./spinner";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-base)] text-sm font-heading font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-4 border-border active:translate-y-1 active:shadow-none",
-  {
-    variants: {
-      variant: {
-        default:
-          "bg-main text-main-foreground shadow-[var(--shadow)] hover:translate-y-[-2px] hover:shadow-[6px_4px_0px_0px_var(--border)]",
-        secondary:
-          "bg-secondary-background text-foreground shadow-[var(--shadow)] hover:translate-y-[-2px] hover:shadow-[6px_4px_0px_0px_var(--border)]",
-        danger:
-          "bg-chart-3 text-main-foreground shadow-[var(--shadow)] hover:translate-y-[-2px] hover:shadow-[6px_4px_0px_0px_var(--border)]",
-        outline:
-          "bg-background text-foreground shadow-[var(--shadow)] hover:translate-y-[-2px] hover:shadow-[6px_4px_0px_0px_var(--border)]",
-        ghost: "border-0 shadow-none hover:bg-secondary-background",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-[var(--radius-base)] px-3",
-        lg: "h-11 rounded-[var(--radius-base)] px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
+type Size = "sm" | "md" | "lg" | "icon" | "icon-sm";
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
+const variants: Record<Variant, string> = {
+  // Signature cut-slab: ink slab, slit sweeps across on hover.
+  primary: "btn-slab font-semibold",
+  // Outlined in ink; ink wipes in from the left on hover.
+  secondary: "wipe border border-ink text-ink",
+  outline: "wipe border border-line-strong text-ink hover:border-ink",
+  ghost: "text-ink-2 hover:text-ink hover:bg-paper-2",
+  danger: "btn-slab btn-slab-danger font-semibold",
+};
+
+const sizes: Record<Size, string> = {
+  sm: "h-8 px-3.5 text-[13px] gap-1.5",
+  md: "h-10 px-5 text-sm gap-2",
+  lg: "h-12 px-7 text-[15px] gap-2",
+  icon: "h-10 w-10",
+  "icon-sm": "h-8 w-8",
+};
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: Variant;
+  size?: Size;
+  loading?: boolean;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
-);
-Button.displayName = "Button";
-
-export { Button, buttonVariants };
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant = "primary", size = "md", loading, disabled, children, ...props },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      disabled={disabled || loading}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center font-medium whitespace-nowrap transition-colors duration-200 ease-[cubic-bezier(.35,0,.15,1)] disabled:opacity-40 select-none",
+        variants[variant],
+        sizes[size],
+        className,
+      )}
+      {...props}
+    >
+      {loading ? <Spinner className="size-4" /> : null}
+      {children}
+    </button>
+  );
+});

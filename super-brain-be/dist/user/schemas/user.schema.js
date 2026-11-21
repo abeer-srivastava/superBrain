@@ -14,21 +14,33 @@ const mongoose_1 = require("@nestjs/mongoose");
 let User = class User {
     email;
     username;
+    displayName;
     passwordHash;
+    tokenVersion;
+    createdAt;
+    updatedAt;
 };
 exports.User = User;
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, unique: true }),
+    (0, mongoose_1.Prop)({ required: true, unique: true, lowercase: true, trim: true }),
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, unique: true }),
+    (0, mongoose_1.Prop)({ required: true, unique: true, trim: true }),
     __metadata("design:type", String)
 ], User.prototype, "username", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true }),
+    (0, mongoose_1.Prop)({ trim: true, maxlength: 60 }),
+    __metadata("design:type", String)
+], User.prototype, "displayName", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true, select: false }),
     __metadata("design:type", String)
 ], User.prototype, "passwordHash", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "tokenVersion", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);

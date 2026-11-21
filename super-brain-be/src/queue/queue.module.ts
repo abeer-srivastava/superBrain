@@ -1,21 +1,12 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { QueueService } from './queue.service';
-import { ExtractionProcessor } from './processors/extraction.processor';
-import { ContentModule } from '../content/content.module';
-import { VectorModule } from '../vector/vector.module';
-import { AiModule } from '../ai/ai.module';
+import { INGEST_QUEUE } from './queue.constants';
 
+/** Producer side only — the worker lives in IngestionModule. */
 @Module({
-  imports: [
-    BullModule.registerQueue({
-      name: 'extraction',
-    }),
-    forwardRef(() => ContentModule),
-    VectorModule,
-    AiModule,
-  ],
-  providers: [QueueService, ExtractionProcessor],
+  imports: [BullModule.registerQueue({ name: INGEST_QUEUE })],
+  providers: [QueueService],
   exports: [QueueService],
 })
 export class QueueModule {}

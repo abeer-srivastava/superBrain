@@ -1,20 +1,20 @@
-import { Document, Types } from 'mongoose';
-export type LinkDocument = Link & Document;
+import { HydratedDocument, Types } from 'mongoose';
+export type LinkDocument = HydratedDocument<Link>;
 export declare class Link {
     userId: Types.ObjectId;
     hash: string;
 }
-export declare const LinkSchema: import("mongoose").Schema<Link, import("mongoose").Model<Link, any, any, any, (Document<unknown, any, Link, any, import("mongoose").DefaultSchemaOptions> & Link & {
+export declare const LinkSchema: import("mongoose").Schema<Link, import("mongoose").Model<Link, any, any, any, (import("mongoose").Document<unknown, any, Link, any, import("mongoose").DefaultSchemaOptions> & Link & {
     _id: Types.ObjectId;
 } & {
     __v: number;
 } & {
     id: string;
-}) | (Document<unknown, any, Link, any, import("mongoose").DefaultSchemaOptions> & Link & {
+}) | (import("mongoose").Document<unknown, any, Link, any, import("mongoose").DefaultSchemaOptions> & Link & {
     _id: Types.ObjectId;
 } & {
     __v: number;
-}), any, Link>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Link, Document<unknown, {}, Link, {
+}), any, Link>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, Link, import("mongoose").Document<unknown, {}, Link, {
     id: string;
 }, import("mongoose").DefaultSchemaOptions> & Omit<Link & {
     _id: Types.ObjectId;
@@ -23,7 +23,7 @@ export declare const LinkSchema: import("mongoose").Schema<Link, import("mongoos
 }, "id"> & {
     id: string;
 }, {
-    userId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Link, Document<unknown, {}, Link, {
+    userId?: import("mongoose").SchemaDefinitionProperty<Types.ObjectId, Link, import("mongoose").Document<unknown, {}, Link, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Link & {
         _id: Types.ObjectId;
@@ -32,7 +32,7 @@ export declare const LinkSchema: import("mongoose").Schema<Link, import("mongoos
     }, "id"> & {
         id: string;
     }> | undefined;
-    hash?: import("mongoose").SchemaDefinitionProperty<string, Link, Document<unknown, {}, Link, {
+    hash?: import("mongoose").SchemaDefinitionProperty<string, Link, import("mongoose").Document<unknown, {}, Link, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<Link & {
         _id: Types.ObjectId;

@@ -16,27 +16,38 @@ exports.QueueService = void 0;
 const common_1 = require("@nestjs/common");
 const bullmq_1 = require("@nestjs/bullmq");
 const bullmq_2 = require("bullmq");
+const queue_constants_1 = require("./queue.constants");
 let QueueService = class QueueService {
-    extractionQueue;
-    constructor(extractionQueue) {
-        this.extractionQueue = extractionQueue;
+    queue;
+    constructor(queue) {
+        this.queue = queue;
     }
-    async addExtractionJob(contentId, type, payload) {
-        await this.extractionQueue.add('extract', { contentId, type, ...payload }, {
+    async enqueueIngest(contentId, opts = {}) {
+        await this.queue.add(opts.reembedOnly ? 'reembed' : 'ingest', { contentId, reembedOnly: opts.reembedOnly }, {
+            jobId: `${opts.reembedOnly ? 'reembed' : 'ingest'}-${contentId}-${Date.now()}`,
             attempts: 3,
-            backoff: {
-                type: 'exponential',
-                delay: 5000,
-            },
-            removeOnComplete: 100,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: 200,
             removeOnFail: 500,
         });
+    }
+    async ping() {
+        try {
+            const client = await this.queue.client;
+            return (await client.ping()) === 'PONG';
+        }
+        catch {
+            return false;
+        }
+    }
+    async counts() {
+        return this.queue.getJobCounts('waiting', 'active', 'failed', 'delayed');
     }
 };
 exports.QueueService = QueueService;
 exports.QueueService = QueueService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, bullmq_1.InjectQueue)('extraction')),
+    __param(0, (0, bullmq_1.InjectQueue)(queue_constants_1.INGEST_QUEUE)),
     __metadata("design:paramtypes", [bullmq_2.Queue])
 ], QueueService);
 //# sourceMappingURL=queue.service.js.map

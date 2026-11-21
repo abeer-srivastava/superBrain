@@ -1,74 +1,280 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* ──────────────────────────────────────────────────────────────────────────
+   SuperBrain design tokens
+   Paper & ink: a calm, editorial surface. One ember accent for action,
+   one highlighter for recall (search matches, citations).
+   ────────────────────────────────────────────────────────────────────────── */
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Light: ink on white. One deep red, used sparingly. */
 :root {
-  --background: oklch(96.22% 0.0569 95.61);
-  --secondary-background: oklch(100% 0 0);
-  --foreground: oklch(0% 0 0);
-  --main-foreground: oklch(0% 0 0);
-  --main: oklch(84.08% 0.1725 84.2);
-  --border: oklch(0% 0 0);
-  --ring: oklch(0% 0 0);
-  --overlay: oklch(0% 0 0 / 0.8);
-  --shadow: 4px 2px 0px 0px var(--border);
-  --chart-1: #FFBF00;
-  --chart-2: #0099FF;
-  --chart-3: #FF7A05;
-  --chart-4: #00D696;
-  --chart-5: #7A83FF;
-  --chart-active-dot: #000;
+  --paper: #ffffff;
+  --paper-2: #f4f4f2;
+  --card: #ffffff;
+  --ink: #111110;
+  --ink-2: #3a3a38;
+  --ink-3: #656561;
+  --line: #11111026;
+  --line-strong: #11111059;
+  --accent: #9c1c1c;
+  --accent-hover: #7d1414;
+  --accent-soft: #f5e7e5;
+  --accent-ink: #ffffff;
+  --highlight: #f3dcd8;
+  --highlight-ink: #7d1414;
+  --success: #2c6a43;
+  --danger: #9c1c1c;
+  --danger-soft: #f5e7e5;
+  --warning: #8a5a12;
+
+  --kind-link: #111110;
+  --kind-note: #656561;
+  --kind-pdf: #9c1c1c;
+  --kind-image: #3a3a38;
+
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 24px 48px -28px rgb(17 17 16 / 0.35);
+  --ease: cubic-bezier(0.35, 0, 0.15, 1);
+  color-scheme: light;
 }
 
-.dark {
-  --background: oklch(28.91% 0.0359 90.09);
-  --secondary-background: oklch(23.93% 0 0);
-  --foreground: oklch(92.49% 0 0);
-  --main-foreground: oklch(0% 0 0);
-  --main: oklch(77.7% 0.1593880864006951 84.38427202675717);
-  --border: oklch(0% 0 0);
-  --ring: oklch(100% 0 0);
-  --shadow: 4px 2px 0px 0px var(--border);
-  --chart-1: #E5AC00;
-  --chart-2: #008AE5;
-  --chart-3: #EB6D00;
-  --chart-4: #00BD84;
-  --chart-5: #7A83FF;
-  --chart-active-dot: #fff;
+[data-theme="dark"], .band-invert {
+  --paper: #111110;
+  --paper-2: #1a1a19;
+  --card: #151514;
+  --ink: #ffffff;
+  --ink-2: #f4f4f2b3;
+  --ink-3: #f4f4f28c;
+  --line: #f4f4f22e;
+  --line-strong: #ffffff59;
+  --accent: #e8746c;
+  --accent-hover: #f08d86;
+  --accent-soft: #2b1614;
+  --accent-ink: #111110;
+  --highlight: #3b1c19;
+  --highlight-ink: #f6b3ac;
+  --success: #6cc08d;
+  --danger: #e8746c;
+  --danger-soft: #2b1614;
+  --warning: #e0a548;
+
+  --kind-link: #ffffff;
+  --kind-note: #f4f4f28c;
+  --kind-pdf: #e8746c;
+  --kind-image: #f4f4f2b3;
+
+  --shadow-lg: 0 24px 48px -24px rgb(0 0 0 / 0.8);
 }
+[data-theme="dark"] { color-scheme: dark; }
+.band-invert { background: var(--paper); color: var(--ink); }
 
 @theme inline {
-  --color-main: var(--main);
-  --color-background: var(--background);
-  --color-secondary-background: var(--secondary-background);
-  --color-foreground: var(--foreground);
-  --color-main-foreground: var(--main-foreground);
-  --color-border: var(--border);
-  --color-overlay: var(--overlay);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-highlight: var(--highlight);
+  --color-highlight-ink: var(--highlight-ink);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-kind-link: var(--kind-link);
+  --color-kind-note: var(--kind-note);
+  --color-kind-pdf: var(--kind-pdf);
+  --color-kind-image: var(--kind-image);
 
-  --spacing-boxShadowX: 4px;
-  --spacing-boxShadowY: 2px;
-  --spacing-reverseBoxShadowX: -4px;
-  --spacing-reverseBoxShadowY: -2px;
-  --radius-base: 10px;
-  --shadow-shadow: var(--shadow);
-  --font-weight-base: 600;
-  --font-weight-heading: 800;
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", monospace;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --radius-card: 0px;
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.35, 0, 0.15, 1) both;
+  --animate-blink: blink 1s steps(2, start) infinite;
 }
-  
+
+@property --cut {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: calc(100% - 11px);
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes blink {
+  to { visibility: hidden; }
+}
+
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
   body {
-    @apply text-foreground font-base bg-background;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: var(--highlight);
+    color: var(--highlight-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  button, [role="button"] { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}
+
+@layer components {
+  /* Headings: bold sans, tight tracking (no serif anywhere). */
+  .font-display {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .font-display em, .font-display i { font-style: normal; color: var(--accent); }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .mark {
+    background: var(--highlight);
+    color: var(--highlight-ink);
+    padding: 0 0.1em;
   }
 
-  h1, h2, h3, h4, h5, h6{
-    @apply font-heading;
+  /* ── Signature: cut-slab button ─────────────────────────────────────────
+     A solid ink slab with a thin slit cut through it. On hover the slit
+     sweeps across the slab. */
+  .btn-slab {
+    --slab: var(--ink);
+    background: linear-gradient(to right, var(--slab) 0 var(--cut), transparent var(--cut) calc(var(--cut) + 3px), var(--slab) calc(var(--cut) + 3px) 100%);
+    color: var(--paper);
+    transition: --cut 0.45s var(--ease), opacity 0.15s;
   }
+  .btn-slab:hover:not(:disabled) { --cut: 8px; }
+  .btn-slab-danger { --slab: var(--danger); color: #fff; }
+
+  /* ── Signature: wipe fill ───────────────────────────────────────────────
+     Ink sweeps in from the left on hover; active items stay filled. */
+  .wipe {
+    background-image: linear-gradient(var(--ink), var(--ink));
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 0% 100%;
+    transition: background-size 0.35s var(--ease), color 0.2s var(--ease);
+  }
+  .wipe:hover, .wipe[data-active="true"] { background-size: 100% 100%; color: var(--paper); }
+  .wipe:hover *, .wipe[data-active="true"] * { color: inherit; }
+
+  /* 1-bit dot texture for quiet decorative surfaces. */
+  .dither {
+    background-image: radial-gradient(var(--ink) 0.9px, transparent 1.1px);
+    background-size: 6px 6px;
+  }
+
+  /* Section claim + tail on one baseline. */
+  .claim { font-weight: 700; letter-spacing: -0.03em; }
+  .claim-tail { color: var(--ink-3); font-weight: 400; letter-spacing: -0.01em; }
+  .skeleton {
+    background: linear-gradient(90deg, var(--paper-2) 25%, var(--line) 37%, var(--paper-2) 63%);
+    background-size: 400% 100%;
+    animation: var(--animate-shimmer);
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+
+  /* Long-form reading typography (item text, answers) */
+  .prose-sb {
+    color: var(--ink);
+    line-height: 1.7;
+    font-size: 1rem;
+  }
+  .prose-sb > * + * { margin-top: 0.85em; }
+  .prose-sb h1, .prose-sb h2, .prose-sb h3 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-top: 1.4em;
+  }
+  .prose-sb h1 { font-size: 1.75rem; }
+  .prose-sb h2 { font-size: 1.45rem; }
+  .prose-sb h3 { font-size: 1.2rem; }
+  .prose-sb ul { list-style: disc; padding-left: 1.25em; }
+  .prose-sb ol { list-style: decimal; padding-left: 1.4em; }
+  .prose-sb li + li { margin-top: 0.3em; }
+  .prose-sb li::marker { color: var(--ink-3); }
+  .prose-sb a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  .prose-sb strong { font-weight: 600; }
+  .prose-sb code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    padding: 0.1em 0.35em;
+  }
+  .prose-sb pre {
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    padding: 0.9em 1em;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  .prose-sb pre code { background: none; border: 0; padding: 0; }
+  .prose-sb blockquote {
+    border-left: 1px solid var(--ink);
+    padding-left: 1em;
+    color: var(--ink-2);
+  }
+  .prose-sb table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+  .prose-sb th, .prose-sb td { border-bottom: 1px solid var(--line); padding: 0.4em 0.6em; text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Selected command-palette rows invert; keep highlighted matches legible. */
+[data-selected="true"] .mark {
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

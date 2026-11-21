@@ -19,11 +19,7 @@ let ShareModule = class ShareModule {
 exports.ShareModule = ShareModule;
 exports.ShareModule = ShareModule = __decorate([
     (0, common_1.Module)({
-        imports: [
-            mongoose_1.MongooseModule.forFeature([{ name: link_schema_1.Link.name, schema: link_schema_1.LinkSchema }]),
-            (0, common_1.forwardRef)(() => content_module_1.ContentModule),
-            user_module_1.UserModule,
-        ],
+        imports: [mongoose_1.MongooseModule.forFeature([{ name: link_schema_1.Link.name, schema: link_schema_1.LinkSchema }]), content_module_1.ContentModule, user_module_1.UserModule],
         controllers: [share_controller_1.ShareController],
         providers: [share_service_1.ShareService],
         exports: [share_service_1.ShareService],

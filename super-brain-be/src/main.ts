@@ -1,97 +1,53 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { Logger } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { setDefaultResultOrder } from 'node:dns';
-import * as fs from 'fs';
-import * as path from 'path';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { allowedOrigins, env } from './config/env';
+import { installQdrantDnsCache } from './common/bootstrap/dns-cache';
+import { AppModule } from './app.module';
 
-// ──────────────────────────────────────────────────────────────────────────────
-// DNS Monkey-patch for Qdrant Cloud
-// Resolves the Qdrant hostname once at startup and caches it to avoid
-// repeated DNS lookups on every HTTP request.
-// ──────────────────────────────────────────────────────────────────────────────
-try {
-  const dns = require('node:dns');
-  const urlStr = process.env.QDRANT_URL;
+export async function createApp() {
+  const config = env(); // throws on invalid configuration
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: config.NODE_ENV === 'production' ? ['log', 'warn', 'error'] : undefined,
+  });
 
-  if (urlStr && urlStr.startsWith('https://')) {
-    const qdrantHost = new URL(urlStr).hostname;
-    let cachedIp = '';
+  const trust = config.TRUST_PROXY;
+  app.set('trust proxy', trust === 'false' ? false : /^\d+$/.test(trust) ? Number(trust) : trust);
+  app.disable('x-powered-by');
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
+  app.use(cookieParser());
+  app.useBodyParser('json', { limit: '1mb' });
+  app.setGlobalPrefix('api/v1');
 
-    dns.resolve4(qdrantHost, (err: any, addresses: string[]) => {
-      if (!err && addresses.length > 0) {
-        cachedIp = addresses[0];
-        console.log(`[DNS Cache] ${qdrantHost} -> ${cachedIp}`);
-      }
-    });
+  const origins = allowedOrigins();
+  app.enableCors({
+    origin: origins.length > 0 ? origins : true,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
 
-    const originalLookup = dns.lookup;
-    dns.lookup = (hostname: string, options: any, callback: any) => {
-      if (typeof options === 'function') {
-        callback = options;
-        options = {};
-      }
-      if (hostname === qdrantHost && cachedIp) {
-        const res = { address: cachedIp, family: 4 };
-        return options.all ? callback(null, [res]) : callback(null, res.address, res.family);
-      }
-      return originalLookup(hostname, options, (err: any, address: any, family: any) => {
-        if (err && hostname === qdrantHost && cachedIp) {
-          const res = { address: cachedIp, family: 4 };
-          return options.all ? callback(null, [res]) : callback(null, res.address, res.family);
-        }
-        if (!err && hostname === qdrantHost && !options.all) {
-          cachedIp = address;
-        }
-        callback(err, address, family);
-      });
-    };
-    console.log(`[DNS Cache] Configured for ${qdrantHost}`);
-  }
-} catch (e) {
-  console.error('[DNS Cache] Failed to configure', e);
-}
-
-setDefaultResultOrder('ipv4first');
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Ensure uploads directory exists (for file uploads)
-// ──────────────────────────────────────────────────────────────────────────────
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log(`[Startup] Created uploads directory: ${uploadsDir}`);
+  app.enableShutdownHooks();
+  return app;
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
-  app.setGlobalPrefix('api/v1');
-
-  // CORS — allow all in dev, restrict via env in production
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
-    : null;
-
-  app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (!allowedOrigins || allowedOrigins.length === 0 || !origin) {
-        // Allow all origins if ALLOWED_ORIGINS not set (dev mode) or no origin header (curl, Postman)
-        return callback(null, true);
-      }
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error(`CORS: Origin ${origin} not allowed`), false);
-    },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-    credentials: true,
-  });
-
-  const port = process.env.PORT ?? 3000;
+  setDefaultResultOrder('ipv4first');
+  installQdrantDnsCache(process.env.QDRANT_URL);
+  const app = await createApp();
+  const port = env().PORT;
   await app.listen(port, '0.0.0.0');
-  console.log(`[SuperBrain] Backend running at http://localhost:${port}/api/v1`);
-  console.log(`[SuperBrain] Health check: http://localhost:${port}/api/v1/health`);
+  const logger = new Logger('SuperBrain');
+  logger.log(`API listening on http://localhost:${port}/api/v1 (health: /api/v1/health/ready)`);
 }
 
-bootstrap();
+if (require.main === module) {
+  bootstrap().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+  });
+}

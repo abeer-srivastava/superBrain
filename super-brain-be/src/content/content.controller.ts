@@ -1,88 +1,168 @@
-import { Controller, Get, Post, Delete, Body, Param, Request, UseGuards, BadRequestException, Logger, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
+import { memoryStorage } from 'multer';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ContentService } from './content.service';
-import { CreateContentSchema } from './dto/content.dto';
+import { CreateContentSchema, ListContentQuerySchema, UpdateContentSchema, UploadMetaSchema } from './dto/content.dto';
 import { QueueService } from '../queue/queue.service';
-import { VectorService } from '../vector/vector.service';
-import type { Express } from 'express';
+import { StorageService, sniffMime } from '../storage/storage.service';
+import { CurrentUser, parse, type AuthUser } from '../common/http/validation';
+import { assertPublicUrl } from '../common/http/safe-fetch';
+import { env } from '../config/env';
 
 @Controller('content')
 @UseGuards(JwtAuthGuard)
 export class ContentController {
-  private readonly logger = new Logger(ContentController.name);
-
   constructor(
-    private readonly contentService: ContentService,
-    private readonly queueService: QueueService,
-    private readonly vectorService: VectorService,
+    private readonly content: ContentService,
+    private readonly queue: QueueService,
+    private readonly storage: StorageService,
   ) {}
 
   @Post()
-  async create(@Request() req: any, @Body() body: any) {
-    const parsed = CreateContentSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new BadRequestException(parsed.error.format());
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  async create(@CurrentUser() user: AuthUser, @Body() body: unknown) {
+    const dto = parse(CreateContentSchema, body);
+    if (dto.type !== 'note') {
+      // Fail fast with a clear message instead of a background failure.
+      await assertPublicUrl(dto.originalLink, !!env().ALLOW_PRIVATE_FETCH).catch((e) => {
+        throw new BadRequestException(e.message);
+      });
     }
-
-    const newContent = await this.contentService.create({
-      userId: req.user.userId,
-      ...parsed.data,
-      status: 'processing',
-    });
-
-    await this.queueService.addExtractionJob(newContent._id.toString(), newContent.type, parsed.data);
-
-    return newContent;
+    const doc = await this.content.create({ ...dto, userId: user.userId, status: 'processing' });
+    await this.queue.enqueueIngest(doc._id.toString());
+    return doc;
   }
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file', {
-    limits: { fileSize: 10 * 1024 * 1024 } // Limit to 10MB
-  }))
-  async uploadFile(@Request() req: any, @UploadedFile() file: Express.Multer.File, @Body() body: any) {
-    if (!file) {
-      throw new BadRequestException('File is required');
-    }
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: env().MAX_UPLOAD_MB * 1024 * 1024, files: 1 },
+    }),
+  )
+  async upload(@CurrentUser() user: AuthUser, @UploadedFile() file: Express.Multer.File | undefined, @Body() body: unknown) {
+    if (!file) throw new BadRequestException('Choose a file to upload');
+    const meta = parse(UploadMetaSchema, body);
+    const mime = sniffMime(file.buffer);
+    if (!mime) throw new BadRequestException('Unsupported file. Upload a PDF, PNG, JPEG, WebP or GIF.');
 
-    const { title, type, extractedText } = body;
-    if (!title || !type) {
-      throw new BadRequestException('Title and type are required');
-    }
-
-    const newContent = await this.contentService.create({
-      userId: req.user.userId,
-      title,
-      type,
-      extractedText,
-      originalLink: file.path, // Store local path as originalLink
+    const key = await this.storage.put(user.userId, file.buffer, mime);
+    const fileName = file.originalname.replace(/[^\w.\- ()]/g, '_').slice(0, 200);
+    const doc = await this.content.create({
+      userId: user.userId,
+      type: mime === 'application/pdf' ? 'pdf' : 'image',
+      title: meta.title,
+      tags: meta.tags,
+      annotation: meta.annotation,
+      filePath: key,
+      fileName,
+      mimeType: mime,
+      fileSize: file.size,
       status: 'processing',
     });
-
-    await this.queueService.addExtractionJob(newContent._id.toString(), newContent.type, {
-        title,
-        type,
-        extractedText,
-        originalLink: file.path,
-        isLocalFile: true
-    });
-
-    return newContent;
+    await this.queue.enqueueIngest(doc._id.toString());
+    const { filePath: _omit, ...safe } = doc.toObject();
+    return safe;
   }
 
   @Get()
-  async findAll(@Request() req: any) {
-    return this.contentService.findByUser(req.user.userId);
+  list(@CurrentUser() user: AuthUser, @Query() query: unknown) {
+    return this.content.list(user.userId, parse(ListContentQuerySchema, query));
+  }
+
+  @Get('stats')
+  stats(@CurrentUser() user: AuthUser) {
+    return this.content.stats(user.userId);
+  }
+
+  @Get('resurface')
+  resurface(@CurrentUser() user: AuthUser) {
+    return this.content.resurface(user.userId);
+  }
+
+  /** Re-embed the whole library (e.g. after a model upgrade). Runs in the background. */
+  @Post('reindex')
+  @HttpCode(202)
+  @Throttle({ default: { limit: 2, ttl: 60 * 60_000 } })
+  async reindex(@CurrentUser() user: AuthUser) {
+    const items = await this.content.idsWithText(user.userId);
+    for (const item of items) await this.queue.enqueueIngest(item._id.toString(), { reembedOnly: true });
+    return { queued: items.length };
+  }
+
+  @Get(':id')
+  async findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const doc = await this.content.findOwned(id, user.userId, { withText: true });
+    void this.content.markViewed(id, user.userId);
+    return doc;
+  }
+
+  @Patch(':id')
+  async update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() body: unknown) {
+    const dto = parse(UpdateContentSchema, body);
+    const updated = await this.content.update(id, user.userId, dto);
+    // Text that feeds the index changed → refresh vectors in the background.
+    if (dto.extractedText !== undefined && updated.type === 'note') {
+      await this.content.setInternal(id, { $set: { status: 'processing' } });
+      await this.queue.enqueueIngest(id);
+      updated.status = 'processing';
+    } else if (dto.title !== undefined || dto.annotation !== undefined) {
+      if (updated.status === 'ready') await this.queue.enqueueIngest(id, { reembedOnly: true });
+    }
+    return updated;
+  }
+
+  @Post(':id/reprocess')
+  @HttpCode(202)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async reprocess(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const doc = await this.content.findOwned(id, user.userId);
+    const unset: Record<string, 1> = { error: 1, summary: 1 };
+    // Re-fetch sources; notes keep their text (it *is* the source).
+    if (doc.type !== 'note') unset.extractedText = 1;
+    await this.content.setInternal(id, { $set: { status: 'processing', keyPoints: [] }, $unset: unset });
+    await this.queue.enqueueIngest(id);
+    return { status: 'processing' };
   }
 
   @Delete(':id')
-  async delete(@Request() req: any, @Param('id') id: string) {
-    // Best-effort vector cleanup — don't let Qdrant failures block content deletion
-    try {
-      await this.vectorService.deleteByContentId(id);
-    } catch (error) {
-      this.logger.warn(`Failed to delete vectors for content ${id}, proceeding with content deletion: ${error.message ?? error}`);
-    }
-    return this.contentService.delete(id, req.user.userId);
+  @HttpCode(200)
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    await this.content.delete(id, user.userId);
+    return { ok: true };
+  }
+
+  /** Serve an uploaded file to its owner only. */
+  @Get(':id/file')
+  async file(@CurrentUser() user: AuthUser, @Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    const doc = await this.content.findOwned(id, user.userId, { withFile: true });
+    if (!doc.filePath || !doc.mimeType) throw new BadRequestException('This item has no file');
+    res.set({
+      'Content-Type': doc.mimeType,
+      'Content-Disposition': `inline; filename="${encodeURIComponent(doc.fileName ?? 'file')}"`,
+      'Cache-Control': 'private, max-age=3600',
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; sandbox",
+    });
+    return new StreamableFile(this.storage.stream(doc.filePath));
   }
 }
