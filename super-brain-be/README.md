@@ -58,13 +58,26 @@ The backend is divided into several core modules:
 
 ## 🔧 Installation & Setup
 
-1. **Install Dependencies**:
+For local development, run MongoDB, Qdrant, and Redis in Docker from the repository root. The Compose file maps Redis to host port `6380` so a backend process running on your computer can connect without colliding with a local Redis on `6379`:
+
+```bash
+# From the repository root
+docker compose up -d mongodb qdrant redis
+```
+
+1. **Configure Environment**:
+
    ```bash
-   npm install
+   cp .env.example .env
    ```
 
-2. **Configure Environment**:
-   Copy `.env.example` to `.env` and fill in your credentials.
+   Set `GEMINI_API_KEY` and keep `REDIS_HOST=127.0.0.1`, `REDIS_PORT=6380` for the local backend. When the backend runs in Docker Compose, it instead connects to `redis:6379` (the Compose config sets this for you).
+
+2. **Install Dependencies**:
+
+   ```bash
+   npm ci
+   ```
 
 3. **Run in Development**:
    ```bash

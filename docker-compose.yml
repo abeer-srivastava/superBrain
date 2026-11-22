@@ -52,6 +52,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: superbrain_redis
+    # Host-run backend uses localhost:6380; containers use redis:6379.
+    ports:
+      - "127.0.0.1:6380:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

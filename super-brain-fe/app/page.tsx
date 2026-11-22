@@ -52,7 +52,7 @@ function ProductStill() {
         <p className="eyebrow">Saved · 3 of 128</p>
         <div data-reveal="stagger" className="relative mt-6 h-[300px]">
           {sheets.map((s, i) => (
-            <div key={s.title} className="absolute w-[86%] border border-ink bg-paper p-4" style={{ top: i * 74, left: i * 18, zIndex: i }}>
+            <div key={s.title} className="absolute w-[86%] border border-ink bg-paper p-4" style={{ top: i * 82, left: i * 18, zIndex: i }}>
               <div className="flex items-center justify-between font-mono text-[10.5px] tracking-[0.04em] text-ink-3">
                 <span>
                   {s.kind} · {s.site}

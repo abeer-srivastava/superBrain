@@ -31,46 +31,60 @@ An AI-powered personal knowledge vault. Save links, PDFs, images, and notes — 
 
 ## Quick Start (Local)
 
-### 1. Start infrastructure
+### 1. Configure the backend
 
 ```bash
-docker compose up mongodb qdrant redis -d
+cp super-brain-be/.env.example super-brain-be/.env
 ```
 
-### 2. Run the backend
+Set `GEMINI_API_KEY` in `super-brain-be/.env`. The example config uses Redis at `127.0.0.1:6380` when the backend runs directly on your computer.
+
+### 2. Start infrastructure
+
+```bash
+docker compose up -d mongodb qdrant redis
+```
+
+Compose publishes the Redis container on host port `6380` because host port `6379` may already be used by a local Redis service. Inside Docker, Redis remains available as `redis:6379`.
+
+### 3. Run the backend
 
 ```bash
 cd super-brain-be
-cp .env.example .env
-# Edit .env — set GEMINI_API_KEY at minimum
-npm install
+npm ci
 npm run start:dev
 ```
 
-### 3. Run the frontend
+### 4. Run the frontend
 
 ```bash
 cd super-brain-fe
-cp .env.example .env.local
-npm install
+npm ci
 npm run dev
 ```
 
 Frontend: http://localhost:3001  
 Backend API: http://localhost:3000/api/v1  
-Health check: http://localhost:3000/api/v1/health
+Health check: http://localhost:3000/api/v1/health/ready
 
 ---
 
 ## Full Stack with Docker
 
 ```bash
-# Build and start everything
-docker compose up --build
+# Copy and configure the backend environment once
+cp super-brain-be/.env.example super-brain-be/.env
+# Set GEMINI_API_KEY, a random JWT_SECRET (at least 32 characters),
+# and ALLOWED_ORIGINS=http://localhost:4000 in super-brain-be/.env
+
+# Build and start the complete stack
+docker compose up -d --build
 
 # Frontend: http://localhost:4000
 # Backend:  http://localhost:3000
 ```
+
+In the full Docker stack, the backend connects to Redis using the Compose service name `redis` on port `6379`. Do not set its container host to `127.0.0.1`; that would point back to the backend container itself.
 
 ---
 
@@ -84,7 +98,7 @@ docker compose up --build
 | `MONGO_URL` | ✅ | MongoDB connection string |
 | `QDRANT_URL` | ✅ | Qdrant URL (`http://127.0.0.1:6333` local) |
 | `QDRANT_API_KEY` | Cloud only | Qdrant Cloud API key |
-| `REDIS_URL` | ✅ | Redis URL (or use `REDIS_HOST`/`REDIS_PORT`) |
+| `REDIS_URL` | No | Redis URL; alternatively use `REDIS_HOST` and `REDIS_PORT` (local Compose Redis is `127.0.0.1:6380` for a host-run backend) |
 | `JWT_SECRET` | ✅ | JWT signing secret (use a long random string) |
 | `ALLOWED_ORIGINS` | Prod only | Comma-separated CORS allowed origins |
 | `PORT` | No | Server port (default: `3000`) |
@@ -93,7 +107,7 @@ docker compose up --build
 
 | Variable | Required | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | ✅ | Backend API URL (e.g., `http://localhost:3000/api/v1`) |
+| `BACKEND_URL` | Docker only | Backend origin used by the frontend's same-origin API proxy (Compose sets `http://backend:3000`) |
 
 ---
 
