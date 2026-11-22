@@ -52,8 +52,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: superbrain_redis
-    ports:
-      - "6379:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -96,7 +94,9 @@ services:
         - NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
     container_name: superbrain_frontend
     ports:
-      - "4000:4000"
+      - "4000:3001"
+    environment:
+      - BACKEND_URL=http://backend:3000
     depends_on:
       - backend
     restart: unless-stopped
